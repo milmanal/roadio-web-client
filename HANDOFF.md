@@ -5,7 +5,7 @@ revived Flask backend (now on Heroku). Read `CLAUDE.md` first — it has the
 architecture, API surface, and wire-format gotchas. This file is the live
 status + what's next.
 
-## Status: Phases 1–5 done & verified in-browser. 6–8 remain.
+## Status: Phases 1–6 done & verified in-browser. 7–8 remain.
 
 | Phase | State | Notes |
 |---|---|---|
@@ -14,8 +14,8 @@ status + what's next.
 | 3 Driving loop + HUD | ✅ verified live | geolocation → /v2/items → HUD |
 | 4 Game cards | ✅ verified live | answer → /v2/events → feedback → advance |
 | 5 GeoGuess + Mapbox GL JS | ✅ verified live | map renders, guess `[lat,lng]` → /v2/events 200 |
-| 6 Daily quiz + Geofence | ⏳ STARTED (see below) | |
-| 7 Babylon premium | ⬜ | |
+| 6 Daily quiz + Geofence | ✅ verified live | quiz list, play→GameCard→/v2/events; fences load |
+| 7 Babylon premium | ⬜ NEXT | |
 | 8 PWA polish | ⬜ | |
 
 ## How to run / verify
@@ -47,7 +47,16 @@ report route is **`POST /v2/events`** with `events` as a **map** `{ "<id>": {ans
 advance sentinel is `answer:"next_event"`; geoguess answer is `[lat,lng]` (server
 scores it); config `location_update_*` are **strings**.
 
-## Phase 6 — Daily quiz + Geofence (IN PROGRESS, partial)
+## Phase 6 — Daily quiz + Geofence ✅ DONE (commit 2e851d0)
+Implemented: `getUserQuizzes`, `playQuiz`, `DailyPage` list+play, `useGeofence`
+wired into `DrivePage`. Live-verified. Learnings for later:
+- `/v2/items` `quiz` param resolves by **name** in practice (geofence `quiz:"jaffa"`).
+- Guest `/v2/user_quizzes` returns an **empty array** (`Object.values` handles both
+  array and keyed-map). A populated user gets the keyed map.
+- Geofence auto-play (proximity) is verified by parts only — needs a field test
+  or a dev simulate button to dry-run the in-radius trigger.
+
+### Original Phase 6 plan (for reference)
 Design (reuses the existing card flow):
 - A quiz is played by `fetchItems({ quiz })` → `useDriving.setItems` + `triggerItems`
   → the existing `GameCard` overlay renders it. Works without driving.
