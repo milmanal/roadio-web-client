@@ -1,0 +1,52 @@
+.drive-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.drive-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  line-height: 1.6;
+}
+
+.btn-stop {
+  background: var(--bad);
+  color: #fff;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--border);
+}
+
+.card-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-end;
+  z-index: 50;
+}
+
+.card {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--surface);
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+  animation: card-up 0.2s ease-out;
+}
+
+@keyframes card-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}

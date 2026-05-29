@@ -1,0 +1,75 @@
+// Ported from Configuration.kt. Server-driven runtime config returned by
+// /v2/user_config and embedded in the items response. Keys match wire format.
+// Only the fields the web client acts on are typed strictly; the rest are
+// passed through. Unknown fields are tolerated.
+
+export interface Quest {
+  next_km_label?: string | null
+  next_station_name?: string | null
+  user_next_station: number
+  quest_name?: string | null
+  map_music?: string | null
+  avatar?: string | null
+  task_opener?: string | null
+  random_sounds?: string[] | null
+}
+
+export interface Billing {
+  [k: string]: unknown
+}
+
+export interface Configuration {
+  username: string
+  user_label: string
+  profile_image?: string | null
+  game_id?: number | null
+  game_name?: string | null
+
+  // Driving loop tuning. NOTE: these arrive as STRINGS from the backend —
+  // coerce with Number() before arithmetic.
+  location_engine_refresh_ms: string | number
+  location_update_ms: string | number
+  location_update_meters: string | number
+  is_driving: boolean | null
+  fetch_in_bg: boolean
+  fetch_markers: boolean
+  screen_on: boolean | null
+
+  // Map
+  zoom_level: number
+  map_rotate: boolean
+  gs_version?: string
+  contest_logo?: string | null
+  avatar_uri?: string | null
+  premium_url?: string // Babylon premium game URL
+  markers?: Record<string, unknown>
+  markers_v2?: Record<string, unknown>
+  modify?: boolean
+  modify_markers?: boolean
+  record_game?: boolean
+
+  // Feature toggles
+  show_daily_quiz_view: boolean
+  show_radio_view: boolean
+  has_game_selected: boolean
+  open_game_selection: boolean
+  is_quest: boolean
+  is_road_quest: boolean
+
+  // Countdown
+  run_clock?: boolean | null
+  clock_seconds?: number | null
+
+  distance_units_label?: string | null
+
+  // Preloading
+  urls_pre_cache?: string[] | null
+  preload_sounds?: string[] | null
+  download_timeout_seconds: number
+  delay_after_quiz_fetch_seconds: number
+
+  quest?: Quest | null
+  billing?: Billing | null
+
+  [k: string]: unknown
+}
