@@ -102,3 +102,16 @@ export interface BavelOrderResponse {
   message: string
   status: string
 }
+
+/** One quiz entry in POST /v2/user_quizzes (keyed by quiz name). */
+export interface UserQuiz {
+  quiz_id: number | string
+  quiz_name: string
+  padding?: number | string | null
+  font_size?: number | string | null
+}
+
+/** POST /v2/user_quizzes → quizzes available to the user, keyed by quiz name. */
+export interface UserQuizzesResponse {
+  user_quizzes: Record<string, UserQuiz>
+}

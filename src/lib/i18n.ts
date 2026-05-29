@@ -18,6 +18,10 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     nextItem: 'נקודה הבאה',
     start: 'התחל',
     settings: 'הגדרות',
+    loading: 'טוען…',
+    quizError: 'טעינת החידונים נכשלה. נסו שוב.',
+    noQuizzes: 'אין חידונים זמינים כרגע.',
+    noQuizItems: 'אין שאלות בחידון הזה כרגע.',
   },
   en: {
     drive: 'Drive',
@@ -28,6 +32,10 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     nextItem: 'Next point',
     start: 'Start',
     settings: 'Settings',
+    loading: 'Loading…',
+    quizError: 'Failed to load quizzes. Try again.',
+    noQuizzes: 'No quizzes available right now.',
+    noQuizItems: 'This quiz has no questions right now.',
   },
 }
 

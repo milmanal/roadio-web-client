@@ -17,6 +17,7 @@ import type {
   PushTokenRequest,
   ReportEvent,
   RoadPointsResponse,
+  UserQuizzesResponse,
 } from '../types'
 
 /** "next_event" — sent as an event's answer to advance/dismiss a card. */
@@ -91,6 +92,19 @@ export function getGeofences(pos?: {
 }): Promise<GeofenceResponse[]> {
   const q = pos ? `?lat=${pos.lat}&lng=${pos.lng}` : ''
   return getJson<GeofenceResponse[]>(`/v2/geofence${q}`)
+}
+
+/** Quizzes available to the user (daily quiz list). Form-encoded. */
+export function getUserQuizzes(params: {
+  userId: string
+  locale?: string | null
+}): Promise<UserQuizzesResponse> {
+  const fields: Record<string, string> = {
+    user_id: params.userId,
+    version: APP_VERSION,
+  }
+  if (params.locale) fields.locale = params.locale
+  return postForm<UserQuizzesResponse>('/v2/user_quizzes', fields)
 }
 
 export function subscribePush(req: PushTokenRequest): Promise<unknown> {

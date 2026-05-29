@@ -2,6 +2,7 @@ import { useSession } from '../store/session'
 import { useDriving } from '../store/driving'
 import { useGeolocation } from '../features/driving/useGeolocation'
 import { useDrivingLoop } from '../features/driving/useDrivingLoop'
+import { useGeofence } from '../features/geofence/useGeofence'
 import GameCard from '../features/games/GameCard'
 import { t } from '../lib/i18n'
 import './DrivePage.css'
@@ -21,6 +22,7 @@ export default function DrivePage() {
   const triggerItems = useDriving((s) => s.triggerItems)
   const { error } = useGeolocation(active)
   useDrivingLoop(active)
+  useGeofence(active)
 
   function toggle() {
     if (active) {
