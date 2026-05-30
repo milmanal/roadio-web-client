@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="28" height="35" viewBox="0 0 28 35">
+    <defs>
+        <path id="w77dfonaka" d="M0 0.181L27.861 0.181 27.861 25.807 0 25.807z"/>
+        <path id="96h0a7hmtc" d="M0.041 0.049L5.147 0.049 5.147 6.618 0.041 6.618z"/>
+    </defs>
+    <g fill="none" fill-rule="evenodd">
+        <g>
+            <g>
+                <g>
+                    <g transform="translate(-260 -829) translate(260 829) translate(0 9) translate(0 .012)">
+                        <mask id="q26yseqysb" fill="#fff">
+                            <use xlink:href="#w77dfonaka"/>
+                        </mask>
+                        <path fill="#2DBCF8" d="M25.104.242v.003c-1.428 0-2.35 1.027-2.35 2.616v3.473c.508.302 1.103.477 1.74.477 1.86 0 3.367-1.483 3.367-3.312 0-1.624-1.189-2.974-2.757-3.257zM9.49 7.215h9.592V6.35H9.49v.865zm0 2.516h9.592v-.865H9.49v.865zm0 2.516h9.592v-.864H9.49v.864zm12.468-5.799h.002v16.54c0 1.557-1.283 2.82-2.866 2.82H18.3c-1.5-.154-2.663-1.414-2.663-2.908 0-1.525 1.21-2.806 2.756-2.916.21-.015.37-.191.362-.398-.008-.207-.18-.37-.39-.37H6.482V2.834C6.483 1.37 7.69.181 9.18.181h13.87c-.69.597-1.094 1.532-1.094 2.68v3.587zm-5.655 19.36H6.483v-.011H2.734v-.017C1.206 25.67 0 24.417 0 22.886c0-1.531 1.206-2.784 2.734-2.893v-.006h.105c.037-.001.074-.003.112-.003l.111.003h3.42v-.003h9.828c-.887.68-1.456 1.74-1.456 2.916 0 1.17.566 2.227 1.448 2.907z" mask="url(#q26yseqysb)"/>
+                    </g>
+                    <g transform="translate(-260 -829) translate(260 829) translate(0 9) translate(22.713 .204)">
+                        <mask id="5kqtt5fydd" fill="#fff">
+                            <use xlink:href="#96h0a7hmtc"/>
+                        </mask>
+                        <path fill="#176281" d="M2.391.05v.003C.963.053.041 1.079.041 2.669v3.473c.507.302 1.102.476 1.74.476 1.859 0 3.366-1.483 3.366-3.312C5.147 1.682 3.96.332 2.391.049" mask="url(#5kqtt5fydd)"/>
+                    </g>
+                </g>
+                <g transform="translate(-260 -829) translate(260 829) translate(8)">
+                    <circle cx="7" cy="7" r="7" fill="#000"/>
+                    <path stroke="#FFF" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.26" d="M3.818 8.909L6.364 10.182 10.182 4.455"/>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

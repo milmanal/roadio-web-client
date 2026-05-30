@@ -50,10 +50,14 @@ export function useDrivingLoop(active: boolean) {
 
         // HUD + config
         session().setHud({
-          score: String(res.score ?? '0'),
+          score: String(res.points ?? res.score ?? '0'),
           rank: String(res.rank ?? '-'),
           nextItemKm: String(res.next_item_km ?? '-'),
           username: res.username ?? '',
+          userLabel: res.user_label ?? '',
+          avatar: res.configuration?.profile_image ?? null,
+          broadcast: typeof res.broadcast === 'string' ? res.broadcast : null,
+          gameName: res.configuration?.game_name ?? null,
         })
         if (res.configuration) driving().setConfig(res.configuration)
         const items = res.items ?? []

@@ -27,7 +27,16 @@ function lngLat(m: MapMarker): [number, number] | null {
 
 export default function MapScreen() {
   const navigate = useNavigate()
-  const { locale, score, rank, nextItemKm } = useSession()
+  const {
+    locale,
+    score,
+    rank,
+    nextItemKm,
+    username,
+    userLabel,
+    avatar,
+    gameName,
+  } = useSession()
   const position = useDriving((s) => s.position)
   const setActive = useDriving((s) => s.setActive)
   const triggerItems = useDriving((s) => s.triggerItems)
@@ -45,6 +54,7 @@ export default function MapScreen() {
   const markerObjs = useRef<Record<string, mapboxgl.Marker>>({})
   const userCarRef = useRef<mapboxgl.Marker | null>(null)
   const didCenter = useRef(false)
+  const recenterTimer = useRef<number | null>(null)
   const [following, setFollowing] = useState(true)
 
   // Mark the session active while the map is mounted.
@@ -63,9 +73,22 @@ export default function MapScreen() {
       zoom: 15,
       attributionControl: false,
     })
-    map.on('dragstart', () => setFollowing(false))
+    // User pans → stop following. After 5s idle → auto-recenter & resume.
+    map.on('dragstart', () => {
+      setFollowing(false)
+      if (recenterTimer.current) window.clearTimeout(recenterTimer.current)
+    })
+    map.on('dragend', () => {
+      if (recenterTimer.current) window.clearTimeout(recenterTimer.current)
+      recenterTimer.current = window.setTimeout(() => {
+        const p = useDriving.getState().position
+        if (p) map.easeTo({ center: [p.lng, p.lat], zoom: 15, duration: 600 })
+        setFollowing(true)
+      }, 5000)
+    })
     mapRef.current = map
     return () => {
+      if (recenterTimer.current) window.clearTimeout(recenterTimer.current)
       map.remove()
       mapRef.current = null
       markerObjs.current = {}
@@ -79,8 +102,9 @@ export default function MapScreen() {
     const ll: [number, number] = [position.lng, position.lat]
     if (!userCarRef.current) {
       const el = document.createElement('div')
-      el.className = 'mk mk-car mk-user'
-      el.textContent = '🚗'
+      el.className = 'mk-user'
+      el.innerHTML =
+        '<span class="mk-user-radius"></span><img class="mk-user-van" src="/car.png" alt="" />'
       userCarRef.current = new mapboxgl.Marker({ element: el, anchor: 'center' })
         .setLngLat(ll)
         .addTo(map)
@@ -175,17 +199,52 @@ export default function MapScreen() {
       )}
       <div ref={containerRef} className="map-canvas" />
 
-      <button
-        className="map-info-btn"
-        aria-label="info"
-        onClick={() => navigate('/babylon')}
-      >
-        ℹ︎
-      </button>
+      {/* Top HUD: Points + Place stats and the user avatar/name. */}
+      <div className="map-top">
+        <div className="map-top-stats">
+          <div className="map-stat">
+            <span className="map-stat-lbl">{t('points', locale)}</span>
+            <span className="map-stat-row">
+              <span className="map-stat-val">{score}</span>
+              <span className="map-stat-ic">⭐</span>
+            </span>
+          </div>
+          <div className="map-stat">
+            <span className="map-stat-lbl">{t('place', locale)}</span>
+            <span className="map-stat-row">
+              <span className="map-stat-val">{rank}</span>
+              <span className="map-stat-ic">⚡</span>
+            </span>
+          </div>
+        </div>
+        <button className="map-user" onClick={() => navigate('/babylon')}>
+          <div className="map-user-txt">
+            <span className="map-user-name">{username || 'guest'}</span>
+            <span className="map-user-sub">
+              {userLabel || t('registerHere', locale)}
+            </span>
+          </div>
+          <span className="map-user-avatar">
+            {avatar ? <img src={avatar} alt="" /> : '🚐'}
+          </span>
+        </button>
+      </div>
+
+      {/* Top-left ROADIO logo badge. */}
+      <img className="map-logo" src="/roadio-logo.png" alt="Roadio" />
+
+      {/* Floating next-item distance pill. */}
+      <div className="map-nearby">
+        <span className="map-nearby-lbl">{t('nearbyItem', locale)}</span>
+        <span className="map-nearby-val">
+          {nextItemKm} <span className="map-nearby-unit">km</span>
+        </span>
+      </div>
 
       {!following && (
         <button
           className="map-recenter-btn"
+          aria-label="recenter"
           onClick={() => {
             setFollowing(true)
             const p = useDriving.getState().position
@@ -197,23 +256,13 @@ export default function MapScreen() {
         </button>
       )}
 
-      <button className="map-daily-btn" onClick={() => navigate('/daily')}>
-        {t('daily', locale)}
-      </button>
-
-      <div className="map-hud">
-        <div className="map-hud-cell">
-          <span className="map-hud-val">{score}</span>
-          <span className="map-hud-lbl">{t('score', locale)}</span>
-        </div>
-        <div className="map-hud-cell">
-          <span className="map-hud-val">{nextItemKm}</span>
-          <span className="map-hud-lbl">{t('nextItem', locale)}</span>
-        </div>
-        <div className="map-hud-cell">
-          <span className="map-hud-val">{rank}</span>
-          <span className="map-hud-lbl">{t('rank', locale)}</span>
-        </div>
+      {/* Bottom-center current-game card → game selection. */}
+      <div className="map-gamecard">
+        <span className="map-gamecard-lbl">{t('currentGame', locale)}</span>
+        <span className="map-gamecard-name">{gameName || 'Trivia on your way'}</span>
+        <button className="map-gamecard-btn" onClick={() => navigate('/daily')}>
+          {t('moreGames', locale)} ›
+        </button>
       </div>
 
       {import.meta.env.DEV && (

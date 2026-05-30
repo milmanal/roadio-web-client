@@ -1,6 +1,6 @@
 // Builds DOM elements for map markers, styled to the original Roadio design:
-// items are red teardrop pins showing their score; the user/cars are red car
-// glyphs; missions are blue pins; completed/seen are faded.
+// items are yellow "?" boxes with a single orange points circle at the right;
+// answered items show a ✓; missions are blue; cars are vans.
 
 import type { MapMarker } from '../../types'
 
@@ -12,31 +12,40 @@ export type MarkerKind =
   | 'completedMission'
   | 'seenItem'
 
+const DONE = new Set<MarkerKind>(['completedMission', 'seenItem'])
+
 export function makeMarkerEl(kind: MarkerKind, m: MapMarker): HTMLElement {
   const el = document.createElement('div')
   el.className = `mk mk-${kind}`
 
   if (kind === 'car') {
-    el.classList.add('mk-car')
-    el.textContent = '🚗'
+    const img = document.createElement('img')
+    img.className = 'mk-othercar'
+    img.src = '/car.png'
+    img.alt = ''
+    el.appendChild(img)
     return el
   }
 
-  // Pin with an inner label (score for items, ✓ for completed, etc.)
-  const pin = document.createElement('div')
-  pin.className = 'mk-pin'
-  const label = document.createElement('span')
-  label.className = 'mk-label'
+  // Yellow (or blue for missions) "?" box.
+  const box = document.createElement('div')
+  box.className = 'mk-box'
+  box.textContent = DONE.has(kind) ? '' : '?'
+  el.appendChild(box)
 
-  if (kind === 'completedMission' || kind === 'seenItem') {
-    label.textContent = '✓'
+  // Exactly one value circle, at the right: points for open items, ✓ when done.
+  const done = DONE.has(kind)
+  if (done) {
+    const check = document.createElement('span')
+    check.className = 'mk-badge mk-badge-done'
+    check.textContent = '✓'
+    el.appendChild(check)
   } else if (typeof m.score === 'number' && m.score > 0) {
-    label.textContent = String(m.score)
-  } else {
-    label.textContent = '?'
+    const badge = document.createElement('span')
+    badge.className = 'mk-badge mk-badge-points'
+    badge.textContent = String(m.score)
+    el.appendChild(badge)
   }
 
-  pin.appendChild(label)
-  el.appendChild(pin)
   return el
 }

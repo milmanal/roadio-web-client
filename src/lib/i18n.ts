@@ -32,6 +32,13 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     schedule: 'קביעת תאריך (לא חובה)',
     scheduleSubmit: 'קבעו לי תאריך',
     babylonError: 'אירעה שגיאה. נסו שוב.',
+    nearbyItem: 'הנקודה הקרובה',
+    radioTrivia: 'טריוויה מהרדיו',
+    points: 'נקודות',
+    place: 'מקום',
+    registerHere: 'להרשמה לחצו',
+    currentGame: 'המשחק כעת',
+    moreGames: 'למשחקים נוספים',
   },
   en: {
     drive: 'Drive',
@@ -56,6 +63,13 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     schedule: 'Schedule a date (optional)',
     scheduleSubmit: 'Schedule me',
     babylonError: 'Something went wrong. Try again.',
+    nearbyItem: 'Nearby item',
+    radioTrivia: 'Radio trivia',
+    points: 'Points',
+    place: 'Place',
+    registerHere: 'register here',
+    currentGame: 'Current game',
+    moreGames: 'More games',
   },
 }
 
