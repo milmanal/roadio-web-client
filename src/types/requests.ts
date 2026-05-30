@@ -12,6 +12,8 @@ export interface FetchItemsRequest {
   /** Fetch a specific quiz's items (daily quiz / geofence quiz). */
   quiz?: string | null
   quiz_name?: string | null
+  /** Fetch a single item's full content by id (proximity trigger). */
+  item_id?: number | null
 }
 
 /**

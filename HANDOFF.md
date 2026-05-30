@@ -5,7 +5,12 @@ revived Flask backend (now on Heroku). Read `CLAUDE.md` first — it has the
 architecture, API surface, and wire-format gotchas. This file is the live
 status + what's next.
 
-## Status: Phases 1–7 done & verified in-browser. 8 remains.
+## Status: Phases 1–7 done. Map main screen built + re-skinned. Trivia flow + a few map items open.
+
+### CURRENT FOCUS — read `MAP_PROGRESS.md` (next to this file)
+The map main screen (`src/features/map/MapScreen.tsx`) is built, re-skinned to the
+original design, and markers are GPU GL layers (no swim). Remaining map polish +
+the full trivia flow are written up in detail in **`MAP_PROGRESS.md`** — start there.
 
 | Phase | State | Notes |
 |---|---|---|
