@@ -441,7 +441,7 @@ export default function MapScreen() {
       <div className="map-gamecard">
         <span className="map-gamecard-lbl">{t('currentGame', locale)}</span>
         <span className="map-gamecard-name">{gameName || 'Trivia on your way'}</span>
-        <button className="map-gamecard-btn" onClick={() => navigate('/daily')}>
+        <button className="map-gamecard-btn" onClick={() => navigate('/games')}>
           {t('moreGames', locale)} ›
         </button>
       </div>

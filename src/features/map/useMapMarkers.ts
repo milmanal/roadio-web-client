@@ -32,9 +32,10 @@ export function useMapMarkers(active: boolean) {
       if (inFlight.current) return
       const pos = driving().position
       if (!pos) return
-      // Respect the backend toggle once we have config.
-      const cfg = driving().config
-      if (cfg && cfg.fetch_markers === false) return
+      // NOTE: do NOT gate on config.fetch_markers — it is false even for users
+      // who have a game selected and ~178 markers (it toggles background/driving
+      // fetching, not the map display). Gating here left the map permanently
+      // empty; /v3/map_markers returns pins whenever a game is selected.
       inFlight.current = true
       try {
         const res = await getMapMarkers({
