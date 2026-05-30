@@ -11,6 +11,7 @@ import { useDrivingLoop } from '../driving/useDrivingLoop'
 import { useGeofence } from '../geofence/useGeofence'
 import { useMapMarkers } from './useMapMarkers'
 import { useProximity } from './useProximity'
+import { useSimDrive } from './useSimDrive'
 import GameCard from '../games/GameCard'
 import { t } from '../../lib/i18n'
 import type { Configuration, MapMarker, MapMarkersResponse } from '../../types'
@@ -117,12 +118,17 @@ export default function MapScreen() {
   const markersV2 = useDriving((s) => s.config?.markers_v2)
   const markersStore = useMarkers()
 
+  // Dev: simulated driving takes over the position feed (real geolocation +
+  // marker polling switched off) and walks the car through the item markers.
+  const [sim, setSim] = useState(false)
+
   // Map screen drives the whole live loop.
-  useGeolocation(true)
+  useGeolocation(!sim)
   useDrivingLoop(true)
   useGeofence(true)
-  useMapMarkers(true)
+  useMapMarkers(!sim)
   useProximity(true)
+  useSimDrive(sim)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
@@ -438,15 +444,23 @@ export default function MapScreen() {
       </div>
 
       {import.meta.env.DEV && (
-        <button
-          className="map-dev-btn"
-          onClick={async () => {
-            const { SAMPLE_ITEMS } = await import('../games/sampleItems')
-            triggerItems(SAMPLE_ITEMS)
-          }}
-        >
-          🃏 dev
-        </button>
+        <div className="map-dev-row">
+          <button
+            className={`map-dev-btn ${sim ? 'map-dev-on' : ''}`}
+            onClick={() => setSim((s) => !s)}
+          >
+            {sim ? '⏹ sim' : '🚗 sim'}
+          </button>
+          <button
+            className="map-dev-btn"
+            onClick={async () => {
+              const { SAMPLE_ITEMS } = await import('../games/sampleItems')
+              triggerItems(SAMPLE_ITEMS)
+            }}
+          >
+            🃏 dev
+          </button>
+        </div>
       )}
 
       <GameCard />

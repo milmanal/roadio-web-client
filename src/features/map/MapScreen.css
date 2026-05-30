@@ -334,12 +334,17 @@
   font-size: 14px;
 }
 
-.map-dev-btn {
+.map-dev-row {
   position: absolute;
   z-index: 4;
   bottom: 116px;
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+}
+
+.map-dev-btn {
   background: rgba(255, 255, 255, 0.92);
   color: #4a4a4a;
   border: 0;
@@ -347,4 +352,10 @@
   padding: 6px 12px;
   font-size: 13px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.map-dev-on {
+  background: #7ed321;
+  color: #1c3d00;
+  font-weight: 700;
 }
