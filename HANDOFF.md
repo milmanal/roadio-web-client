@@ -5,7 +5,7 @@ revived Flask backend (now on Heroku). Read `CLAUDE.md` first — it has the
 architecture, API surface, and wire-format gotchas. This file is the live
 status + what's next.
 
-## Status: Phases 1–6 done & verified in-browser. 7–8 remain.
+## Status: Phases 1–7 done & verified in-browser. 8 remains.
 
 | Phase | State | Notes |
 |---|---|---|
@@ -15,8 +15,8 @@ status + what's next.
 | 4 Game cards | ✅ verified live | answer → /v2/events → feedback → advance |
 | 5 GeoGuess + Mapbox GL JS | ✅ verified live | map renders, guess `[lat,lng]` → /v2/events 200 |
 | 6 Daily quiz + Geofence | ✅ verified live | quiz list, play→GameCard→/v2/events; fences load |
-| 7 Babylon premium | ⬜ NEXT | |
-| 8 PWA polish | ⬜ | |
+| 7 Babylon premium | ✅ verified live | lead form→/v3/bavel_order + /v3/game_web_schedule 200 |
+| 8 PWA polish | ⬜ NEXT | offline precache, push token, code-split Mapbox |
 
 ## How to run / verify
 ```bash
