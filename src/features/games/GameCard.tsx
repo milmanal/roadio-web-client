@@ -5,6 +5,7 @@ import { reportAnswer, reportEvents, NEXT_EVENT } from '../../api/endpoints'
 import { isCorrect, isScored } from './answer'
 import type { CardProps, CardResult } from './cardProps'
 import type { RoadPoint, RoadPointType } from '../../types'
+import TriviaCard from './cards/TriviaCard'
 import QuestionCard from './cards/QuestionCard'
 import QuantitativeCard from './cards/QuantitativeCard'
 import StoryCard from './cards/StoryCard'
@@ -108,6 +109,13 @@ export default function GameCard() {
   }
 
   const kind = cardKind(point)
+
+  // Multiple-choice trivia gets the full-screen themed flow (signpost buttons,
+  // multiple attempts, reaction animation, story reveal + vote). It owns its
+  // own reporting/advance, so it renders outside the bottom-sheet shell.
+  if (kind === 'question' && (point.answers?.length ?? 0) > 0) {
+    return <TriviaCard point={point} />
+  }
 
   return (
     <div className="card-overlay">

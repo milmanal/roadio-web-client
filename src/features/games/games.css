@@ -150,3 +150,297 @@
   color: var(--text);
   font-weight: 400;
 }
+
+/* ============================================================
+   Full-screen trivia flow (multiple-choice `question` items).
+   Themed gradient card, white signpost answer buttons, reaction
+   layer, story reveal + vote, segmented progress, score row.
+   ============================================================ */
+.trivia-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+.trivia {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  /* default theme: bright sky-blue gradient (per the quiz screenshots) */
+  background: linear-gradient(180deg, #1b9fe0 0%, #2bb6e8 45%, #6fd0c4 100%);
+  color: #fff;
+  padding: calc(20px + env(safe-area-inset-top)) 18px
+    calc(14px + env(safe-area-inset-bottom));
+  overflow: hidden;
+}
+
+.trivia-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+  overflow-y: auto;
+  position: relative;
+}
+
+.trivia-title {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.trivia-q {
+  text-align: center;
+  font-size: 24px;
+  line-height: 1.35;
+  font-weight: 800;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+/* White signpost / arrow answer buttons */
+.signposts {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 0 0 auto;
+}
+
+.signpost {
+  position: relative;
+  background: #fff;
+  color: #222;
+  border: 0;
+  border-radius: 12px;
+  /* arrow notch on the leading (left) edge */
+  clip-path: polygon(7% 0, 100% 0, 100% 100%, 7% 100%, 0 50%);
+  padding: 20px 22px 20px 34px;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+}
+
+.signpost-right {
+  background: #7ed321;
+  color: #1c3d00;
+}
+
+.signpost-wrong {
+  background: #ff6b6b;
+  color: #3d0000;
+}
+
+/* Reaction layer (car frames + on-fire banner) */
+.trivia-reaction {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  flex: 0 0 auto;
+}
+
+.reaction-car {
+  width: 200px;
+  max-width: 60%;
+  height: auto;
+  object-fit: contain;
+  animation: car-pop 0.3s ease-out;
+}
+
+@keyframes car-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.fire-banner {
+  position: absolute;
+  left: 4px;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  z-index: 2;
+}
+
+.fire-911 {
+  font-size: 64px;
+  font-weight: 900;
+  color: #fff;
+  -webkit-text-stroke: 3px #111;
+  line-height: 1;
+}
+
+.fire-text {
+  background: #7ed321;
+  color: #fff;
+  -webkit-text-stroke: 1px #111;
+  font-size: 22px;
+  font-weight: 900;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+/* Story reveal */
+.trivia-reveal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 0 0 auto;
+}
+
+.reveal-story {
+  font-size: 17px;
+  line-height: 1.5;
+  margin: 0;
+  white-space: pre-line;
+}
+
+.vote-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.vote-q {
+  font-weight: 800;
+  font-size: 17px;
+}
+
+.vote {
+  background: transparent;
+  border: 0;
+  font-size: 26px;
+  cursor: pointer;
+  opacity: 0.7;
+  filter: grayscale(0.4);
+}
+
+.vote-on {
+  opacity: 1;
+  filter: none;
+  transform: scale(1.2);
+}
+
+.next-btn {
+  align-self: center;
+  background: #fff;
+  color: #1b9fe0;
+  border: 0;
+  border-radius: 12px;
+  padding: 14px 48px;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
+}
+
+/* Segmented progress */
+.trivia-progress {
+  display: flex;
+  gap: 6px;
+  padding: 10px 0;
+  flex: 0 0 auto;
+  direction: ltr;
+}
+
+.seg {
+  flex: 1;
+  height: 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.seg-active {
+  background: #7ed321;
+}
+
+.seg-done {
+  background: #5aa800;
+}
+
+/* Score / Place / Time row */
+.trivia-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 auto;
+  padding-top: 4px;
+  direction: ltr;
+}
+
+.foot-stat {
+  flex: 1;
+  text-align: center;
+}
+
+.stat-val {
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.stat-label {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+/* Bear-style place badge */
+.place-badge {
+  position: relative;
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  background: #1b9fe0;
+  border: 4px solid #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+}
+
+.place-badge::before,
+.place-badge::after {
+  content: '';
+  position: absolute;
+  top: -10px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #1b9fe0;
+  border: 4px solid #fff;
+}
+
+.place-badge::before {
+  left: -2px;
+}
+
+.place-badge::after {
+  right: -2px;
+}
+
+.place-val {
+  font-size: 20px;
+  font-weight: 800;
+  z-index: 1;
+}
+
+.place-label {
+  font-size: 12px;
+  z-index: 1;
+}

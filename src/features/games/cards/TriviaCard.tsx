@@ -1,0 +1,275 @@
+import { useEffect, useRef, useState } from 'react'
+import { useDriving } from '../../../store/driving'
+import { useSession } from '../../../store/session'
+import { reportEvents, NEXT_EVENT } from '../../../api/endpoints'
+import { isCorrect, isScored, normalize } from '../answer'
+import { MediaBlock } from '../MediaBlock'
+import type { RoadPoint } from '../../../types'
+
+const CORRECT_FRAMES = [
+  '/reactions/correct_car_1.png',
+  '/reactions/correct_car_2.png',
+  '/reactions/correct_car_3.png',
+  '/reactions/correct_car_4.png',
+]
+const WRONG_FRAME = '/reactions/wrong_car.png'
+
+type Phase = 'asking' | 'reacting' | 'revealed'
+
+function fmtTime(total: number): string {
+  const s = Math.max(0, Math.floor(total))
+  const mm = String(Math.floor(s / 60)).padStart(2, '0')
+  const ss = String(s % 60).padStart(2, '0')
+  return `${mm}:${ss}`
+}
+
+/**
+ * Full-screen themed trivia flow: signpost answer buttons, multiple attempts
+ * (points_first_correct vs points_second_correct), correct/wrong reaction
+ * animation + "on fire!" banner, then a story reveal with a thumbs up/down
+ * vote. Owns its own answer/vote/advance reporting. Labels are English.
+ */
+export default function TriviaCard({ point }: { point: RoadPoint }) {
+  const dismiss = useDriving((s) => s.dismissActive)
+  const queueLen = useDriving((s) => s.queue.length)
+  const position = useDriving((s) => s.position)
+  const userId = useSession((s) => s.userId)
+  const setHud = useSession((s) => s.setHud)
+  const score = useSession((s) => s.score)
+  const rank = useSession((s) => s.rank)
+
+  const scored = isScored(point)
+  const rightAnswer = point.right_answer?.trim() ?? null
+  const choices = (point.answers ?? []).filter(Boolean)
+  const maxAttempts = point.points_second_correct != null ? 2 : 1
+
+  const [phase, setPhase] = useState<Phase>('asking')
+  const [eliminated, setEliminated] = useState<string[]>([])
+  const [attempts, setAttempts] = useState(0)
+  const [picked, setPicked] = useState<string | null>(null)
+  const [correct, setCorrect] = useState(false)
+  const [reaction, setReaction] = useState<'correct' | 'wrong'>('correct')
+  const [frame, setFrame] = useState(0)
+  const [voted, setVoted] = useState<'up' | 'down' | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const latlng = {
+    lat: position ? String(position.lat) : null,
+    lng: position ? String(position.lng) : null,
+  }
+
+  // Count up elapsed time, or count down from `countdown` when the item sets one.
+  const hasCountdown = (point.countdown ?? 0) > 0
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setElapsed((e) => e + 1), 1000)
+    return () => clearInterval(id)
+  }, [])
+  const timeLabel = hasCountdown
+    ? fmtTime((point.countdown ?? 0) - elapsed)
+    : fmtTime(elapsed)
+
+  // Cycle the correct-reaction frames while reacting; wrong is a single frame.
+  useEffect(() => {
+    if (phase !== 'reacting' || reaction !== 'correct') return
+    const id = setInterval(() => setFrame((f) => (f + 1) % CORRECT_FRAMES.length), 220)
+    return () => clearInterval(id)
+  }, [phase, reaction])
+
+  // After a reaction plays, either reveal the story (resolved) or return to the
+  // question for another attempt.
+  const retryRef = useRef(false)
+  useEffect(() => {
+    if (phase !== 'reacting') return
+    const id = setTimeout(() => {
+      if (retryRef.current) {
+        retryRef.current = false
+        setPhase('asking')
+      } else {
+        setPhase('revealed')
+      }
+    }, 1700)
+    return () => clearTimeout(id)
+  }, [phase])
+
+  async function report(event: { answer?: string; vote?: string }) {
+    try {
+      const res = await reportEvents({
+        user_id: userId,
+        ...latlng,
+        events: { [String(point.id)]: event },
+      })
+      if (typeof res.score === 'number') {
+        setHud({ score: String(res.score), rank: String(res.rank) })
+      }
+    } catch {
+      // advancing/scoring locally regardless of report failure
+    }
+  }
+
+  async function onPick(choice: string) {
+    if (busy || phase !== 'asking') return
+    setBusy(true)
+    setPicked(choice)
+    const right = scored ? isCorrect(point, choice) : true
+    await report({ answer: choice })
+    if (right) {
+      setCorrect(true)
+      setReaction('correct')
+      setFrame(0)
+      setPhase('reacting')
+    } else {
+      const nextAttempts = attempts + 1
+      setAttempts(nextAttempts)
+      setEliminated((e) => [...e, choice])
+      setReaction('wrong')
+      if (nextAttempts < maxAttempts) {
+        retryRef.current = true
+      } else {
+        setCorrect(false)
+      }
+      setPhase('reacting')
+    }
+    setBusy(false)
+  }
+
+  async function onVote(v: 'up' | 'down') {
+    if (voted) return
+    setVoted(v)
+    await report({ vote: v })
+  }
+
+  async function onContinue() {
+    if (busy) return
+    setBusy(true)
+    await report({ answer: NEXT_EVENT })
+    setBusy(false)
+    dismiss()
+  }
+
+  // No scoring info (rare types routed here defensively): just show + advance.
+  const themeClass = `trivia trivia-theme-${point.marker_family || 'default'}`
+  const totalSegments = Math.max(1, queueLen + 1)
+  const onFire = phase === 'reacting' && reaction === 'correct'
+
+  return (
+    <div className="trivia-overlay">
+      <div className={themeClass}>
+        <div className="trivia-body">
+          {point.quiz_name && <h1 className="trivia-title">• {point.quiz_name} •</h1>}
+          {point.question && <h2 className="trivia-q">{point.question}</h2>}
+          <MediaBlock images={point.question_images} voice={point.question_voice} />
+
+          {/* Reaction layer */}
+          {phase === 'reacting' && (
+            <div className="trivia-reaction">
+              {onFire && (
+                <div className="fire-banner">
+                  <span className="fire-911">911</span>
+                  <span className="fire-text">This player is on fire!</span>
+                </div>
+              )}
+              <img
+                className="reaction-car"
+                src={reaction === 'correct' ? CORRECT_FRAMES[frame] : WRONG_FRAME}
+                alt=""
+              />
+            </div>
+          )}
+
+          {/* Answers */}
+          {phase !== 'reacting' && choices.length > 0 && (
+            <div className="signposts">
+              {choices.map((choice) => {
+                const isGone =
+                  phase === 'asking' && eliminated.includes(choice)
+                if (isGone) return null
+                const isRight =
+                  phase === 'revealed' &&
+                  rightAnswer != null &&
+                  normalize(choice) === normalize(rightAnswer)
+                const isPickWrong =
+                  phase === 'revealed' &&
+                  !correct &&
+                  picked != null &&
+                  normalize(choice) === normalize(picked) &&
+                  !isRight
+                const cls = [
+                  'signpost',
+                  isRight ? 'signpost-right' : '',
+                  isPickWrong ? 'signpost-wrong' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')
+                return (
+                  <button
+                    key={choice}
+                    className={cls}
+                    disabled={busy || phase === 'revealed'}
+                    onClick={() => onPick(choice)}
+                  >
+                    {choice}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Story reveal + vote */}
+          {phase === 'revealed' && (
+            <div className="trivia-reveal">
+              {point.story && <p className="reveal-story">{point.story}</p>}
+              <MediaBlock images={point.story_images} voice={point.story_voices?.[0]} />
+              <div className="vote-row">
+                <button
+                  className={`vote vote-down ${voted === 'down' ? 'vote-on' : ''}`}
+                  onClick={() => onVote('down')}
+                  aria-label="thumbs down"
+                >
+                  👎
+                </button>
+                <span className="vote-q">Did you like the question?</span>
+                <button
+                  className={`vote vote-up ${voted === 'up' ? 'vote-on' : ''}`}
+                  onClick={() => onVote('up')}
+                  aria-label="thumbs up"
+                >
+                  👍
+                </button>
+              </div>
+              <button className="next-btn" onClick={onContinue} disabled={busy}>
+                NEXT
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Segmented progress */}
+        <div className="trivia-progress">
+          {Array.from({ length: totalSegments }).map((_, i) => (
+            <span
+              key={i}
+              className={`seg ${i === 0 ? (phase === 'revealed' ? 'seg-done' : 'seg-active') : ''}`}
+            />
+          ))}
+        </div>
+
+        {/* Score / Place / Time */}
+        <div className="trivia-footer">
+          <div className="foot-stat">
+            <div className="stat-val">{score}</div>
+            <div className="stat-label">Score</div>
+          </div>
+          <div className="place-badge">
+            <div className="place-val">{rank}</div>
+            <div className="place-label">Place</div>
+          </div>
+          <div className="foot-stat">
+            <div className="stat-val">{timeLabel}</div>
+            <div className="stat-label">Time</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
