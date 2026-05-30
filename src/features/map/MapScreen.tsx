@@ -398,7 +398,7 @@ export default function MapScreen() {
             </span>
           </div>
         </div>
-        <button className="map-user" onClick={() => navigate('/babylon')}>
+        <button className="map-user" onClick={() => navigate('/settings')}>
           <div className="map-user-txt">
             <span className="map-user-name">{username || 'guest'}</span>
             <span className="map-user-sub">

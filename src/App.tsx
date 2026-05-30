@@ -4,6 +4,7 @@ import MapScreen from './features/map/MapScreen'
 import DailyPage from './routes/DailyPage'
 import BabylonPage from './routes/BabylonPage'
 import GamesPage from './routes/GamesPage'
+import SettingsPage from './routes/SettingsPage'
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         <Route path="/drive" element={<MapScreen />} />
         <Route path="/daily" element={<DailyPage />} />
         <Route path="/games" element={<GamesPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/babylon" element={<BabylonPage />} />
         <Route path="*" element={<Navigate to="/drive" replace />} />
       </Route>
