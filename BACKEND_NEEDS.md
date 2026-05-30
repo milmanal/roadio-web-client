@@ -93,6 +93,34 @@ rank, which is wrong for quizzes).
 
 ---
 
+## 3b. Registration + Profile + Leaderboard (the "contest" feature set)
+
+There are zeplin designs (`zeplin desings/Darom/roadioS8 galil_quiz_*`) for a
+**registration** screen, a **profile/score** screen (press your name/guest), and
+the **leaderboard** above. None of these exist in the client repo or the native
+Android app — they were rendered by the **premium webview game** (now 503). The
+main backend has **no** endpoints for any of them (all 404). We have the designs
+and the avatar art (the 6 "mood" cars = the `public/reactions` car colors), so we
+can build the UI — but every screen needs data:
+
+**Registration — `בואו נכיר`** (form fields in the mock):
+`email`, `כינוי` (nickname), `משתתף בתחרות?` (join_contest yes/no), `ישוב`
+(settlement — needs a **settlements list** endpoint to populate the dropdown),
+`Mood` (one of 6 car avatars), `קוד משחק` (game code).
+- **Need:** `POST /v2/register` (or similar) with `{user_id, email, nickname,
+  join_contest, settlement_id, mood, game_code}` → creates/links a named user.
+- **Need:** `GET /v2/settlements?locale=…` → list for the ישוב dropdown.
+- **Need:** the canonical **mood/avatar** list (ids + the 6 car images) if not
+  hardcoded client-side.
+- Today the HUD "register here" has nowhere to go (premium signup is dead).
+
+**Profile / your score** (press name): your rank, settlement rank, and the
+counts shown in the mock (`משימות` / `שאלות`). Same data as the leaderboard
+"me" block.
+
+**Leaderboard — `מיקומים` + `מיקום ישובים`:** see §3. Needs named player
+rankings (global + your neighborhood) **and** a settlement ranking.
+
 ## 4. Web push — need a VAPID public key
 
 `POST /v2/push_notif_token` exists, but the client cannot create a push
