@@ -55,6 +55,7 @@ export default function MapScreen() {
   const userCarRef = useRef<mapboxgl.Marker | null>(null)
   const didCenter = useRef(false)
   const recenterTimer = useRef<number | null>(null)
+  const resizeObs = useRef<ResizeObserver | null>(null)
   const [following, setFollowing] = useState(true)
 
   // Mark the session active while the map is mounted.
@@ -86,9 +87,18 @@ export default function MapScreen() {
         setFollowing(true)
       }, 5000)
     })
+    map.on('load', () => map.resize())
+    // Keep the GL canvas matched to its container. Without this the projection
+    // is computed against a stale size, so the user car renders off-centre and
+    // every marker drifts on zoom.
+    const ro = new ResizeObserver(() => map.resize())
+    ro.observe(containerRef.current)
+    resizeObs.current = ro
     mapRef.current = map
     return () => {
       if (recenterTimer.current) window.clearTimeout(recenterTimer.current)
+      resizeObs.current?.disconnect()
+      resizeObs.current = null
       map.remove()
       mapRef.current = null
       markerObjs.current = {}
