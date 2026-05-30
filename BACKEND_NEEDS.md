@@ -65,15 +65,31 @@ webview (`/game_selection_2`) whose buttons are native deep links
 
 ---
 
-## 3. Leaderboard — no endpoint exists
+## 3. Leaderboard — no named-players board exists anywhere
 
-All probes 404 on the main backend (`/leaderboard`, `/scoreboard`,
-`/v2/leaderboard`, `/ranking`, …) and the premium webview is 503.
+Clarified after checking the legacy Android app + backend:
+- There is **no leaderboard page or endpoint**. Main-backend probes 404
+  (`/leaderboard`, `/v2/leaderboard`, `/ranking`, …); the premium webview is
+  503; and the legacy Android app has **no leaderboard screen** either.
+- The only ranking data the backend returns:
+  - top-level **`score` / `rank`** (road-game HUD) — already used.
+  - per road-point **`rank_stats: [{count, score}]`** — an **anonymous score
+    distribution** (e.g. `{count:694, score:0}` = 694 players scored 0). The
+    legacy app **computes the player's "Place"** from this (how many players
+    scored above you). This is what the quiz **Place** badge shows. It is **not**
+    a list of named players.
+- The zeplin "leaderboard" mock (named ranks 1–10 with scores) has **no live
+  data source**.
 
-**What we need:** a JSON leaderboard endpoint, e.g.
+**What we need (only if you want a real named leaderboard):**
 `GET /v2/leaderboard?user_id=…&game_id=…&locale=…` →
-`{ me: {rank, score}, entries: [{rank, name, score, avatar?}] }`.
-Group/quest variants if relevant (the old design had a "group score" board).
+`{ me: {rank, score}, entries: [{rank, name, score, avatar?}] }`
+(group/quest variants if relevant). **Without this, "Leaderboard" stays
+deferred** — we can only show the computed Place from `rank_stats`, not a board.
+
+**Client-side TODO (no backend needed):** compute quiz **Place** from
+`rank_stats` like the legacy app (currently the quiz card shows the `/v2/events`
+rank, which is wrong for quizzes).
 
 ---
 
