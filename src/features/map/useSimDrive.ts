@@ -138,6 +138,13 @@ export function useSimDrive(routeId: string | null) {
         })
         if (cancelled) return
         const items = res.items ?? []
+        if (items.length === 0) {
+          console.warn(
+            '[sim] backend returned 0 map markers for this user — no game ' +
+              'selected. Driving seeded demo pins instead. Tap the 👤 dev ' +
+              'button to switch to a demo user with real markers.',
+          )
+        }
         markers().setAll({
           cars: res.cars ?? [],
           items: items.length ? items : seedMarkers(waypoints),

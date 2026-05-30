@@ -12,3 +12,18 @@ export function getDeviceId(): string {
   }
   return id
 }
+
+/**
+ * Dev only: switch the persisted device id and reload. A fresh guest has no
+ * selected game, so the backend returns 0 map markers — pass a populated demo
+ * id (e.g. `web-probe-1`, which has a game selected + ~178 markers) to drive
+ * real items in the simulator. Pass `null` to fall back to a fresh guest.
+ */
+export function setDeviceId(id: string | null): void {
+  if (id) localStorage.setItem(KEY, id)
+  else localStorage.removeItem(KEY)
+  location.reload()
+}
+
+/** Dev demo user with a game selected (real markers across Tel Aviv). */
+export const DEMO_USER_ID = 'web-probe-1'

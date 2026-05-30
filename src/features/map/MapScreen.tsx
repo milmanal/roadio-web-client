@@ -14,6 +14,7 @@ import { useProximity } from './useProximity'
 import { useSimDrive, SIM_ROUTES } from './useSimDrive'
 import GameCard from '../games/GameCard'
 import { t } from '../../lib/i18n'
+import { getDeviceId, setDeviceId, DEMO_USER_ID } from '../../lib/deviceId'
 import type { Configuration, MapMarker, MapMarkersResponse } from '../../types'
 import './MapScreen.css'
 
@@ -471,6 +472,21 @@ export default function MapScreen() {
             }}
           >
             🃏
+          </button>
+          {/* Switch to a demo user that has a selected game → real markers.
+              A fresh guest has none, so sim would only get seeded pins. */}
+          <button
+            className={`map-dev-btn ${getDeviceId() === DEMO_USER_ID ? 'map-dev-on' : ''}`}
+            onClick={() =>
+              setDeviceId(getDeviceId() === DEMO_USER_ID ? null : DEMO_USER_ID)
+            }
+            title={
+              getDeviceId() === DEMO_USER_ID
+                ? 'Demo user (real markers). Tap → back to guest'
+                : 'Switch to demo user with real markers'
+            }
+          >
+            👤
           </button>
         </div>
       )}
