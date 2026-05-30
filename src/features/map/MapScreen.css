@@ -341,7 +341,11 @@
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  width: max-content;
+  max-width: 92vw;
 }
 
 .map-dev-btn {

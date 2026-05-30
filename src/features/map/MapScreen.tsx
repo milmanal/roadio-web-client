@@ -11,7 +11,7 @@ import { useDrivingLoop } from '../driving/useDrivingLoop'
 import { useGeofence } from '../geofence/useGeofence'
 import { useMapMarkers } from './useMapMarkers'
 import { useProximity } from './useProximity'
-import { useSimDrive } from './useSimDrive'
+import { useSimDrive, SIM_ROUTES } from './useSimDrive'
 import GameCard from '../games/GameCard'
 import { t } from '../../lib/i18n'
 import type { Configuration, MapMarker, MapMarkersResponse } from '../../types'
@@ -119,16 +119,18 @@ export default function MapScreen() {
   const markersStore = useMarkers()
 
   // Dev: simulated driving takes over the position feed (real geolocation +
-  // marker polling switched off) and walks the car through the item markers.
-  const [sim, setSim] = useState(false)
+  // marker polling switched off), fetches the real markers for the picked
+  // route's area, and walks the car along it so questions pop as you pass pins.
+  const [simRoute, setSimRoute] = useState<string | null>(null)
+  const sim = simRoute != null
 
   // Map screen drives the whole live loop.
   useGeolocation(!sim)
-  useDrivingLoop(true)
+  useDrivingLoop(!sim)
   useGeofence(true)
   useMapMarkers(!sim)
   useProximity(true)
-  useSimDrive(sim)
+  useSimDrive(simRoute)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
@@ -445,12 +447,22 @@ export default function MapScreen() {
 
       {import.meta.env.DEV && (
         <div className="map-dev-row">
-          <button
-            className={`map-dev-btn ${sim ? 'map-dev-on' : ''}`}
-            onClick={() => setSim((s) => !s)}
-          >
-            {sim ? '⏹ sim' : '🚗 sim'}
-          </button>
+          {sim ? (
+            <button className="map-dev-btn map-dev-on" onClick={() => setSimRoute(null)}>
+              ⏹ {SIM_ROUTES.find((r) => r.id === simRoute)?.name ?? 'sim'}
+            </button>
+          ) : (
+            SIM_ROUTES.map((r) => (
+              <button
+                key={r.id}
+                className="map-dev-btn"
+                onClick={() => setSimRoute(r.id)}
+                title={`Sim drive: ${r.name}`}
+              >
+                🚗 {r.name}
+              </button>
+            ))
+          )}
           <button
             className="map-dev-btn"
             onClick={async () => {
@@ -458,7 +470,7 @@ export default function MapScreen() {
               triggerItems(SAMPLE_ITEMS)
             }}
           >
-            🃏 dev
+            🃏
           </button>
         </div>
       )}
