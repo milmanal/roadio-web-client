@@ -1,3 +1,26 @@
+/* Full-screen overlay + bottom-sheet panel. Must sit above the map HUD (whose
+   highest layer is z-index 4) and the Mapbox canvas, otherwise the canvas
+   intercepts pointer events and the answer buttons never receive clicks. */
+.card-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.card {
+  width: 100%;
+  max-width: 520px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 18px calc(18px + env(safe-area-inset-bottom));
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.45);
+}
+
 .card-inner {
   display: flex;
   flex-direction: column;
