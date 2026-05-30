@@ -27,9 +27,29 @@ Games selection), and the old Android `res/` in `../roadio-mvp2`.
   as LTR absolutes → everything shifted by a viewport width. `.map-canvas` is
   forced `direction: ltr`. Also a `ResizeObserver → map.resize()`.
 
-## RIGHT NOW (in progress, uncommitted-but-green)
-Wiring the **proximity → question → seen** loop. Done so far: added `item_id`
-to `FetchItemsRequest` (`src/types/requests.ts`). NEXT STEPS (verified facts):
+## PROXIMITY LOOP — DONE (commit f9d2088, build+lint green)
+`src/features/map/useProximity.ts` added + wired into `MapScreen`. When the car
+is within 100m of a `useMarkers().items` pin with an `item_id` (not already
+fired, no `activeCard` open) → `fetchItems({item_id})` → `useDriving.triggerItems`.
+Also `useMapMarkers` now forces a `/v3/map_markers` refetch on activeCard
+non-null→null so the answered item moves to seen_items + the ✓ icon.
+**Live-verified in real Chrome (Playwright):** synthetic item marker at GPS →
+card pops with the real item content (3 choices, q text), `/v2/items?item_id=`
+returned 200, PAGEERR=0.
+
+**KNOWN GAP for next session:** the answer→`.feedback` step timed out in the
+headless test even with force-click — `.card-overlay` rendered the full question
+(card-q + media-img + card-story, 3 `.choice` buttons) but clicking a choice
+didn't surface `.feedback`. NOT the proximity code (that's proven). It's the
+existing `GameCard`/`QuestionCard` flow — investigate as part of task #10 (the
+full trivia flow rebuild). Could be RTL actionability or the live `/v2/events`
+await; stub `/v2/events` when testing.
+
+NOTE: there is NO haversine stub anywhere — `src/lib/geo.ts distanceMeters` is
+already correct (a phantom tool result earlier suggested otherwise; ignore).
+
+### Earlier notes (kept for reference)
+Added `item_id` to `FetchItemsRequest` (`src/types/requests.ts`). Verified facts:
 1. **`/v2/items` with `{item_id}` returns that single item's full content**
    (200, 1 item with type/question/answers). This is how you pull a marker's
    playable item — verified live with ids 2504735 (question), 1400933 (html),
