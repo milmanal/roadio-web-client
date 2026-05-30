@@ -70,20 +70,17 @@ Added `item_id` to `FetchItemsRequest` (`src/types/requests.ts`). Verified facts
    exact lat/lng (read one from a `/v3/map_markers` response) → card should pop →
    answer → dismiss → marker flips to the seen icon on the next markers poll.
 
-## OPEN map polish (user feedback, by priority)
-- **Server-driven icons per marker (incl. family/festival variants).** Currently
-  icons are 5 local group-defaults (regular vs seen vs mission are already
-  distinct — these ARE the server's default-family art). For full fidelity,
-  resolve each marker's icon from `configuration.markers_v2[type][family].icon`
-  and load those URLs into the map (`map.loadImage`, callback-style here, not
-  promise). CORS: raw.githubusercontent.com generally allows it; keep the local
-  defaults as fallback. typeKey per store group: items→`item`,
-  seenItems→`seen_item`, missions→`mission`, openMissions→`open_mission`,
-  completedMissions→`completed_mission`.
-- **Points coin too big / not tight to the corner** (low pri). In `MapScreen`
-  load handler: `mk-coin` `circle-radius` ~8.5 (was 11), `mk-coin-text`
-  `text-size` ~9 (was 11), and tighten `circle-translate`/`text-translate` from
-  `[12,-34]` toward the icon's top-right (icon-size 0.3, anchor bottom).
+## OPEN map polish — DONE
+- **Server-driven icons per marker — DONE (commit b229632).** `markers_v2` typed
+  as `Record<string, MarkerStyle[]>` (config.ts). MapScreen resolves each
+  marker's icon by `markers_v2[typeKey].find(family) ?? find('default')`, lazy-
+  loads the PNG via `map.loadImage` keyed by URL, draws local default first then
+  upgrades on load. Live-verified family='ben_gurion' fetched the right server
+  PNG (200). NOTE shape gotcha: `markers_v2[type]` is a **list of
+  {family,icon,...}**, NOT family-keyed. icon-size stays 0.3 — server xhdpi PNGs
+  may want per-type tuning later if any look oversized.
+- **Points coin — DONE (commit 45bc834).** radius 11→8.5, text 11→9,
+  translate [12,-34]→[9,-27].
 
 ## KEY BACKEND FACTS (for the map/gameplay)
 - Map item markers only appear once the user has game/quiz **state** — a fresh
