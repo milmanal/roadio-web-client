@@ -194,7 +194,16 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
           {phase !== 'summary' && (
             <>
               {point.question && <h2 className="trivia-q">{point.question}</h2>}
-              <MediaBlock images={point.question_images} voice={point.question_voice} />
+              {/* On reveal, if the story has its own image, drop the question
+                  image so the post-answer screen isn't double-imaged. */}
+              <MediaBlock
+                images={
+                  phase === 'revealed' && (point.story_images ?? []).some(Boolean)
+                    ? null
+                    : point.question_images
+                }
+                voice={point.question_voice}
+              />
             </>
           )}
 
