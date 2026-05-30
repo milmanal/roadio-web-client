@@ -13,7 +13,7 @@ import { useMapMarkers } from './useMapMarkers'
 import { useProximity } from './useProximity'
 import GameCard from '../games/GameCard'
 import { t } from '../../lib/i18n'
-import type { MapMarker, MapMarkersResponse } from '../../types'
+import type { Configuration, MapMarker, MapMarkersResponse } from '../../types'
 import './MapScreen.css'
 
 const MAP_STYLE = 'mapbox://styles/mapbox/streets-v12'
@@ -27,32 +27,61 @@ const ICON_FILES: Record<string, string> = {
   'mk-done': '/markers/completed_mission.png',
 }
 
-const GROUP_ICON: [keyof MapMarkersResponse, string][] = [
-  ['items', 'mk-item'],
-  ['seenItems', 'mk-seen'],
-  ['missions', 'mk-mission'],
-  ['openMissions', 'mk-open'],
-  ['completedMissions', 'mk-done'],
+// store group → [local fallback icon id, markers_v2 type key]
+const GROUP_ICON: [keyof MapMarkersResponse, string, string][] = [
+  ['items', 'mk-item', 'item'],
+  ['seenItems', 'mk-seen', 'seen_item'],
+  ['missions', 'mk-mission', 'mission'],
+  ['openMissions', 'mk-open', 'open_mission'],
+  ['completedMissions', 'mk-done', 'completed_mission'],
 ]
 
 type MarkerFC = GeoJSON.FeatureCollection<GeoJSON.Point>
 
-/** Build a GeoJSON FeatureCollection from the grouped marker store. */
-function buildMarkerFC(store: {
-  items: MapMarker[]
-  seenItems: MapMarker[]
-  missions: MapMarker[]
-  openMissions: MapMarker[]
-  completedMissions: MapMarker[]
-}): MarkerFC {
+/**
+ * Resolve a marker's server-driven icon URL from `markers_v2[typeKey]` by
+ * family, falling back to the `default` family. Returns null when config has
+ * no entry (caller then uses the local default icon id).
+ */
+function serverIconUrl(
+  markersV2: Configuration['markers_v2'],
+  typeKey: string,
+  family: string | null | undefined,
+): string | null {
+  const styles = markersV2?.[typeKey]
+  if (!styles?.length) return null
+  const fam = family ?? 'default'
+  const hit = styles.find((s) => s.family === fam) ?? styles.find((s) => s.family === 'default')
+  return hit?.icon ?? null
+}
+
+/**
+ * Build a GeoJSON FeatureCollection from the grouped marker store. Each feature
+ * gets the server family icon (URL used as the image id) when config provides
+ * one AND the map has already loaded it (`isLoaded`); otherwise the local
+ * default icon id, so markers always draw and upgrade to server art on load.
+ */
+function buildMarkerFC(
+  store: {
+    items: MapMarker[]
+    seenItems: MapMarker[]
+    missions: MapMarker[]
+    openMissions: MapMarker[]
+    completedMissions: MapMarker[]
+  },
+  markersV2?: Configuration['markers_v2'],
+  isLoaded?: (id: string) => boolean,
+): MarkerFC {
   const features: MarkerFC['features'] = []
-  for (const [group, icon] of GROUP_ICON) {
+  for (const [group, localIcon, typeKey] of GROUP_ICON) {
     const list = store[group as keyof typeof store] as MapMarker[]
     for (const m of list ?? []) {
       const lng = Number(m.lng)
       const lat = Number(m.lat)
       if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue
       const label = m.content ?? m.map_label_info
+      const srvUrl = serverIconUrl(markersV2, typeKey, m.family)
+      const icon = srvUrl && isLoaded?.(srvUrl) ? srvUrl : localIcon
       features.push({
         type: 'Feature',
         geometry: { type: 'Point', coordinates: [lng, lat] },
@@ -85,6 +114,7 @@ export default function MapScreen() {
   const position = useDriving((s) => s.position)
   const setActive = useDriving((s) => s.setActive)
   const triggerItems = useDriving((s) => s.triggerItems)
+  const markersV2 = useDriving((s) => s.config?.markers_v2)
   const markersStore = useMarkers()
 
   // Map screen drives the whole live loop.
@@ -101,6 +131,10 @@ export default function MapScreen() {
   const didCenter = useRef(false)
   const recenterTimer = useRef<number | null>(null)
   const resizeObs = useRef<ResizeObserver | null>(null)
+  // Server marker icons loaded into the GL style, keyed by their URL (also the
+  // mapbox image id). `loading` guards against duplicate in-flight loads.
+  const loadedIcons = useRef<Set<string>>(new Set())
+  const loadingIcons = useRef<Set<string>>(new Set())
   const [following, setFollowing] = useState(true)
   const [layersReady, setLayersReady] = useState(false)
 
@@ -292,14 +326,43 @@ export default function MapScreen() {
     }
   }, [position, following])
 
-  // Push marker data into the GL source whenever it changes (GPU-rendered
-  // symbol/circle layers — no DOM markers, so nothing "swims" on zoom).
+  // Push marker data into the GL source whenever markers OR the server icon
+  // config change (GPU-rendered symbol/circle layers — no DOM markers, so
+  // nothing "swims" on zoom). Markers draw immediately with local default art,
+  // then lazily upgrade to per-family server icons as each PNG finishes
+  // loading (a load triggers a re-setData so the upgraded id takes effect).
   useEffect(() => {
     const map = mapRef.current
     if (!map || !layersReady) return
-    const src = map.getSource('markers') as mapboxgl.GeoJSONSource | undefined
-    src?.setData(buildMarkerFC(markersStore))
-  }, [markersStore, layersReady])
+    const isLoaded = (id: string) => loadedIcons.current.has(id)
+    const setData = () => {
+      const src = map.getSource('markers') as mapboxgl.GeoJSONSource | undefined
+      src?.setData(buildMarkerFC(useMarkers.getState(), markersV2, isLoaded))
+    }
+    setData()
+
+    // Kick off loads for any referenced server icons not yet in the style.
+    if (!markersV2) return
+    const wanted = new Set<string>()
+    for (const [group, , typeKey] of GROUP_ICON) {
+      const list = markersStore[group as keyof typeof markersStore] as MapMarker[]
+      for (const m of list ?? []) {
+        const url = serverIconUrl(markersV2, typeKey, m.family)
+        if (url) wanted.add(url)
+      }
+    }
+    for (const url of wanted) {
+      if (loadedIcons.current.has(url) || loadingIcons.current.has(url)) continue
+      loadingIcons.current.add(url)
+      map.loadImage(url, (err, image) => {
+        loadingIcons.current.delete(url)
+        if (err || !image) return
+        if (!map.hasImage(url)) map.addImage(url, image)
+        loadedIcons.current.add(url)
+        setData() // re-render so features pick up the now-loaded icon
+      })
+    }
+  }, [markersStore, markersV2, layersReady])
 
   return (
     <div className="map-screen">

@@ -3,6 +3,15 @@
 // Only the fields the web client acts on are typed strictly; the rest are
 // passed through. Unknown fields are tolerated.
 
+/** One per-family marker style inside `markers_v2[type]`. */
+export interface MarkerStyle {
+  family: string
+  icon: string
+  infobox_color?: string | null
+  points_color?: string | null
+  display_points?: boolean | null
+}
+
 export interface Quest {
   next_km_label?: string | null
   next_station_name?: string | null
@@ -43,7 +52,13 @@ export interface Configuration {
   avatar_uri?: string | null
   premium_url?: string // Babylon premium game URL
   markers?: Record<string, unknown>
-  markers_v2?: Record<string, unknown>
+  /**
+   * Server-driven marker art keyed by marker type
+   * (`item`/`seen_item`/`mission`/`open_mission`/`completed_mission`). Each
+   * type holds a list of per-family styles; the `default` family is the
+   * fallback. `icon` is a raw PNG URL on raw.githubusercontent.com.
+   */
+  markers_v2?: Record<string, MarkerStyle[]>
   modify?: boolean
   modify_markers?: boolean
   record_game?: boolean
