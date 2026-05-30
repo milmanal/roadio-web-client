@@ -1,0 +1,139 @@
+.profile-page {
+  min-height: 100dvh;
+  background: linear-gradient(180deg, #1b9fe0 0%, #2bb6e8 45%, #6fd0c4 100%);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.prof-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.prof-settings {
+  background: rgba(255, 255, 255, 0.2);
+  border: 0;
+  color: #fff;
+  font-size: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.prof-id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.prof-name-big {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.prof-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  overflow: hidden;
+}
+
+.prof-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.prof-stats {
+  display: flex;
+  justify-content: space-around;
+  direction: ltr;
+  padding: 8px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.prof-stat {
+  text-align: center;
+}
+
+.prof-stat-val {
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.prof-stat-of {
+  font-size: 16px;
+  opacity: 0.85;
+}
+
+.prof-stat-lbl {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.prof-board-title {
+  font-size: 20px;
+  font-weight: 800;
+  margin: 0 0 8px;
+}
+
+.prof-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.prof-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #173a4a;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.prof-row-me {
+  background: #fff;
+  font-weight: 800;
+  box-shadow: 0 0 0 2px #7ed321;
+}
+
+.prof-rank {
+  min-width: 28px;
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.prof-name {
+  flex: 1;
+}
+
+.prof-score {
+  font-weight: 800;
+  color: #1b9fe0;
+}
+
+.prof-register {
+  background: none;
+  border: 0;
+  color: #fff;
+  text-decoration: underline;
+  font-size: 14px;
+  padding: 2px 0 0;
+  cursor: pointer;
+}

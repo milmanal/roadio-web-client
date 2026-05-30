@@ -123,3 +123,43 @@ export interface UserQuiz {
 export interface UserQuizzesResponse {
   user_quizzes: Record<string, UserQuiz>
 }
+
+/** One row in a leaderboard board (classic / daily / towns). */
+export interface LeaderboardRow {
+  rank: number
+  name: string
+  score: number
+  is_me?: boolean
+}
+
+/** POST /v2/profile — profile header + leaderboard boards. */
+export interface ProfileResponse {
+  me: {
+    name: string
+    avatar: string
+    rank: number
+    total_players: number
+    score: number
+    missions: number
+    questions: number
+    settlement: string
+    settlement_rank: number | null
+  }
+  classic: LeaderboardRow[]
+  daily: LeaderboardRow[]
+  towns: LeaderboardRow[]
+  game_id?: number
+}
+
+/** One settlement option (GET /v2/towns → { towns: [...] }). */
+export interface Town {
+  id: number | string
+  name: string
+}
+
+/** One avatar/mood option (GET /v2/moods → { moods: [...] }). */
+export interface Mood {
+  mood_id: string
+  label: string
+  icon_url: string
+}

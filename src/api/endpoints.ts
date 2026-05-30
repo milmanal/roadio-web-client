@@ -14,10 +14,13 @@ import type {
   GeofenceResponse,
   MapMarkersRequest,
   MapMarkersResponse,
+  Mood,
+  ProfileResponse,
   PurchaseUpdateRequest,
   PushTokenRequest,
   ReportEvent,
   RoadPointsResponse,
+  Town,
   UserQuizzesResponse,
 } from '../types'
 
@@ -106,6 +109,52 @@ export function getUserQuizzes(params: {
   }
   if (params.locale) fields.locale = params.locale
   return postForm<UserQuizzesResponse>('/v2/user_quizzes', fields)
+}
+
+/** Profile header + leaderboard boards (profile / press-your-name screen). */
+export function getProfile(params: {
+  userId: string
+  locale?: string | null
+  game_id?: number | null
+}): Promise<ProfileResponse> {
+  return postJson<ProfileResponse>('/v2/profile', {
+    user_id: params.userId,
+    version: APP_VERSION,
+    locale: params.locale ?? undefined,
+    game_id: params.game_id ?? undefined,
+  })
+}
+
+/** Settlement options for the registration dropdown. */
+export function getTowns(): Promise<Town[]> {
+  return getJson<{ towns: Town[] }>('/v2/towns').then((r) => r.towns ?? [])
+}
+
+/** Avatar/mood options for registration (the 6 vans). */
+export function getMoods(): Promise<Mood[]> {
+  return getJson<{ moods: Mood[] }>('/v2/moods').then((r) => r.moods ?? [])
+}
+
+/** Register/link a named user. Returns the refreshed configuration. */
+export function registerUser(fields: {
+  userId: string
+  email: string
+  nickname: string
+  join_contest: boolean
+  town_id?: number | string | null
+  mood_id?: string | null
+  game_code?: string | null
+}): Promise<Configuration> {
+  return postJson<Configuration>('/v2/register', {
+    user_id: fields.userId,
+    version: APP_VERSION,
+    email: fields.email,
+    nickname: fields.nickname,
+    join_contest: fields.join_contest,
+    town_id: fields.town_id ?? null,
+    mood_id: fields.mood_id ?? null,
+    game_code: fields.game_code ?? '',
+  })
 }
 
 export function subscribePush(req: PushTokenRequest): Promise<unknown> {

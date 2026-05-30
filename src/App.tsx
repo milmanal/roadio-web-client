@@ -10,6 +10,8 @@ const DailyPage = lazy(() => import('./routes/DailyPage'))
 const BabylonPage = lazy(() => import('./routes/BabylonPage'))
 const GamesPage = lazy(() => import('./routes/GamesPage'))
 const SettingsPage = lazy(() => import('./routes/SettingsPage'))
+const ProfilePage = lazy(() => import('./routes/ProfilePage'))
+const RegistrationPage = lazy(() => import('./routes/RegistrationPage'))
 
 export default function App() {
   return (
@@ -21,6 +23,8 @@ export default function App() {
           <Route path="/daily" element={<DailyPage />} />
           <Route path="/games" element={<GamesPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/register" element={<RegistrationPage />} />
           <Route path="/babylon" element={<BabylonPage />} />
           <Route path="*" element={<Navigate to="/drive" replace />} />
         </Route>
