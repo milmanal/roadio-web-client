@@ -115,12 +115,21 @@ export default function GameCard() {
 
   const kind = cardKind(point)
 
-  // Multiple-choice trivia gets the full-screen themed flow (signpost buttons,
-  // multiple attempts, reaction animation, story reveal + vote). It owns its
-  // own reporting/advance, so it renders outside the bottom-sheet shell.
-  if (kind === 'question' && (point.answers?.length ?? 0) > 0) {
-    // key per item id so internal flow state (phase/attempts/vote) resets
-    // when the queue advances to the next question.
+  // Full-screen themed flow (signpost buttons, multiple attempts, reaction,
+  // story reveal + vote, end-of-quiz summary). It owns its own reporting/
+  // advance, so it renders outside the bottom-sheet shell. key per item id so
+  // internal flow state resets when the queue advances.
+  // - any multiple-choice question (driving or quiz), and
+  // - quiz info/reveal cards (html/story with no choices) so the quiz stays
+  //   one continuous themed experience — but NOT real webview-template games,
+  //   geoguess, or quantitative, which keep their dedicated cards.
+  const hasChoices = (point.answers?.length ?? 0) > 0
+  const isQuizItem = point.quiz_name != null || point.is_quiz === true
+  const isWebGame = !!point.html_template_name
+  if (kind === 'question' && hasChoices) {
+    return <TriviaCard key={point.id} point={point} />
+  }
+  if (isQuizItem && !isWebGame && kind !== 'geo' && kind !== 'quant') {
     return <TriviaCard key={point.id} point={point} />
   }
 

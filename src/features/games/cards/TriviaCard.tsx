@@ -14,7 +14,7 @@ const CORRECT_FRAMES = [
 ]
 const WRONG_FRAME = '/reactions/wrong_car.png'
 
-type Phase = 'asking' | 'reacting' | 'revealed'
+type Phase = 'asking' | 'reacting' | 'revealed' | 'summary'
 
 function fmtTime(total: number): string {
   const s = Math.max(0, Math.floor(total))
@@ -43,8 +43,13 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
   const rightAnswer = point.right_answer?.trim() ?? null
   const choices = (point.answers ?? []).filter(Boolean)
   const maxAttempts = point.points_second_correct != null ? 2 : 1
+  // No-choice quiz items (html/story/info) are reveal-only: skip straight to
+  // the themed story/answer reveal — no guessing, no reaction.
+  const revealOnly = choices.length === 0
+  const isQuiz = point.quiz_name != null || point.is_quiz === true
+  const isLastQuizCard = isQuiz && queueLen === 0
 
-  const [phase, setPhase] = useState<Phase>('asking')
+  const [phase, setPhase] = useState<Phase>(revealOnly ? 'revealed' : 'asking')
   const [eliminated, setEliminated] = useState<string[]>([])
   const [attempts, setAttempts] = useState(0)
   const [picked, setPicked] = useState<string | null>(null)
@@ -142,6 +147,14 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
 
   function onContinue() {
     report({ answer: NEXT_EVENT })
+    // Genuinely the last quiz card (nothing left queued) → end-of-quiz summary.
+    // `last_quiz_item` is unreliable (backend sets it mid-quiz), so gate on an
+    // empty queue instead. Only for quizzes — the driving game streams forever.
+    const queueEmpty = useDriving.getState().queue.length === 0
+    if (isQuiz && queueEmpty && phase !== 'summary') {
+      setPhase('summary')
+      return
+    }
     dismiss()
   }
 
@@ -154,13 +167,29 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
   const currentIndex = idx >= 0 ? idx : 0
   const onFire = phase === 'reacting' && reaction === 'correct'
 
+  // Place: for quiz items the backend ships an anonymous score distribution
+  // (rank_stats); derive the player's place from it (1 + players who scored
+  // higher) like the Android app. Otherwise fall back to the HUD rank.
+  const stats = point.rank_stats
+  let placeLabel = rank
+  if (stats && stats.length > 0) {
+    const myScore = Math.max(0, Number(score) || 0)
+    placeLabel = String(
+      1 + stats.filter((s) => s.score > myScore).reduce((n, s) => n + s.count, 0),
+    )
+  }
+
   return (
     <div className="trivia-overlay">
       <div className={themeClass}>
         <div className="trivia-body">
           {point.quiz_name && <h1 className="trivia-title">• {point.quiz_name} •</h1>}
-          {point.question && <h2 className="trivia-q">{point.question}</h2>}
-          <MediaBlock images={point.question_images} voice={point.question_voice} />
+          {phase !== 'summary' && (
+            <>
+              {point.question && <h2 className="trivia-q">{point.question}</h2>}
+              <MediaBlock images={point.question_images} voice={point.question_voice} />
+            </>
+          )}
 
           {/* Reaction layer */}
           {phase === 'reacting' && (
@@ -180,7 +209,7 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
           )}
 
           {/* Answers */}
-          {phase !== 'reacting' && choices.length > 0 && (
+          {phase !== 'reacting' && phase !== 'summary' && choices.length > 0 && (
             <div className="signposts">
               {choices.map((choice) => {
                 const isGone =
@@ -220,6 +249,10 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
           {/* Story reveal + vote */}
           {phase === 'revealed' && (
             <div className="trivia-reveal">
+              {/* Reveal-only info cards have no signposts — surface the answer. */}
+              {revealOnly && rightAnswer && (
+                <div className="signpost signpost-right reveal-answer">{rightAnswer}</div>
+              )}
               {point.story && <p className="reveal-story">{point.story}</p>}
               <MediaBlock images={point.story_images} voice={point.story_voices?.[0]} />
               <div className="vote-row">
@@ -240,7 +273,27 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
                 </button>
               </div>
               <button className="next-btn" onClick={onContinue}>
-                NEXT
+                {isLastQuizCard ? 'FINISH' : 'NEXT'}
+              </button>
+            </div>
+          )}
+
+          {/* End-of-quiz summary */}
+          {phase === 'summary' && (
+            <div className="trivia-summary">
+              <h2 className="summary-title">Quiz complete!</h2>
+              <div className="summary-stats">
+                <div className="foot-stat">
+                  <div className="stat-val">{score}</div>
+                  <div className="stat-label">Score</div>
+                </div>
+                <div className="place-badge">
+                  <div className="place-val">{placeLabel}</div>
+                  <div className="place-label">Place</div>
+                </div>
+              </div>
+              <button className="next-btn" onClick={() => dismiss()}>
+                FINISH
               </button>
             </div>
           )}
@@ -266,7 +319,7 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
             <div className="stat-label">Score</div>
           </div>
           <div className="place-badge">
-            <div className="place-val">{rank}</div>
+            <div className="place-val">{placeLabel}</div>
             <div className="place-label">Place</div>
           </div>
           <div className="foot-stat">

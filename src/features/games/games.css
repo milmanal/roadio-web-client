@@ -309,6 +309,36 @@
   white-space: pre-line;
 }
 
+/* Answer banner on reveal-only info cards (no signposts to highlight) */
+.reveal-answer {
+  clip-path: none;
+  border-radius: 12px;
+  padding: 16px 18px;
+  text-align: center;
+}
+
+/* End-of-quiz summary */
+.trivia-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  padding: 24px 0;
+}
+
+.summary-title {
+  font-size: 26px;
+  font-weight: 900;
+  margin: 0;
+}
+
+.summary-stats {
+  display: flex;
+  align-items: center;
+  gap: 36px;
+  direction: ltr;
+}
+
 .vote-row {
   display: flex;
   align-items: center;

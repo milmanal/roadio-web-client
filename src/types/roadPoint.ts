@@ -64,6 +64,13 @@ export interface RoadPoint {
   points_second_correct: number | null
   countdown: number | null
 
+  /**
+   * Anonymous score distribution for this quiz item: how many players scored
+   * each value. The client derives the player's "Place" from it:
+   * place = 1 + Σ count where score > yourScore (mirrors the Android app).
+   */
+  rank_stats?: { count: number; score: number }[] | null
+
   marker_family: string | null
   top_marker: boolean | null
   html_template_name: string | null // e.g. "babel/pattern_lock.html"

@@ -52,3 +52,9 @@ export async function playQuiz({ quizId, quizName }: PlayQuizArgs): Promise<numb
   if (items.length) return driving.triggerItems(items)
   return 0
 }
+
+// Dev: drive a quiz from the console / tests (the daily list is empty for fresh
+// guests, so this lets us exercise a full quiz with a virgin user id).
+if (import.meta.env.DEV) {
+  ;(window as unknown as { __playQuiz?: typeof playQuiz }).__playQuiz = playQuiz
+}
