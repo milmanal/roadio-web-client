@@ -210,11 +210,11 @@ export default function MapScreen() {
           source: 'markers',
           filter: ['>', ['get', 'points'], 0],
           paint: {
-            'circle-radius': 11,
+            'circle-radius': 8.5,
             'circle-color': '#f5a623',
             'circle-stroke-color': '#fff',
             'circle-stroke-width': 2,
-            'circle-translate': [12, -34],
+            'circle-translate': [9, -27],
             'circle-translate-anchor': 'viewport',
           },
         })
@@ -225,13 +225,13 @@ export default function MapScreen() {
           filter: ['>', ['get', 'points'], 0],
           layout: {
             'text-field': ['to-string', ['get', 'points']],
-            'text-size': 11,
+            'text-size': 9,
             'text-allow-overlap': true,
             'text-ignore-placement': true,
           },
           paint: {
             'text-color': '#fff',
-            'text-translate': [12, -34],
+            'text-translate': [9, -27],
             'text-translate-anchor': 'viewport',
           },
         })
