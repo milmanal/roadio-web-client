@@ -10,6 +10,7 @@ import { useGeolocation } from '../driving/useGeolocation'
 import { useDrivingLoop } from '../driving/useDrivingLoop'
 import { useGeofence } from '../geofence/useGeofence'
 import { useMapMarkers } from './useMapMarkers'
+import { useProximity } from './useProximity'
 import GameCard from '../games/GameCard'
 import { t } from '../../lib/i18n'
 import type { MapMarker, MapMarkersResponse } from '../../types'
@@ -91,6 +92,7 @@ export default function MapScreen() {
   useDrivingLoop(true)
   useGeofence(true)
   useMapMarkers(true)
+  useProximity(true)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)

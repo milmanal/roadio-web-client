@@ -28,7 +28,7 @@ export function useMapMarkers(active: boolean) {
     const session = useSession.getState
     const markers = useMarkers.getState
 
-    async function fetchMarkers() {
+    async function fetchMarkers(force = false) {
       if (inFlight.current) return
       const pos = driving().position
       if (!pos) return
@@ -41,7 +41,7 @@ export function useMapMarkers(active: boolean) {
           user_id: session().userId,
           lat: String(pos.lat),
           lng: String(pos.lng),
-          force: !firstDone.current,
+          force: force || !firstDone.current,
           background: false,
         })
         firstDone.current = true
@@ -72,6 +72,9 @@ export function useMapMarkers(active: boolean) {
     void fetchMarkers()
     const unsub = useDriving.subscribe((s, prev) => {
       if (s.position !== prev.position && moved()) void fetchMarkers()
+      // A card just closed → force a refresh so the answered item moves to
+      // seen_items and re-renders with the ✓ icon.
+      if (prev.activeCard && !s.activeCard) void fetchMarkers(true)
     })
     const tick = setInterval(() => {
       if (moved()) void fetchMarkers()
