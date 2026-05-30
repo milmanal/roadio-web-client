@@ -33,6 +33,8 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
   const dismiss = useDriving((s) => s.dismissActive)
   const queueLen = useDriving((s) => s.queue.length)
   const items = useDriving((s) => s.items)
+  const results = useDriving((s) => s.results)
+  const setResult = useDriving((s) => s.setResult)
   const position = useDriving((s) => s.position)
   const userId = useSession((s) => s.userId)
   const setHud = useSession((s) => s.setHud)
@@ -46,14 +48,15 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
   // No-choice quiz items (html/story/info) are reveal-only: skip straight to
   // the themed story/answer reveal — no guessing, no reaction.
   const revealOnly = choices.length === 0
+  // A single-choice item is an intro/outro CTA (e.g. "ready?" / "see you!") —
+  // no reaction, no story reveal, just acknowledge and advance.
+  const isIntro = choices.length === 1
   const isQuiz = point.quiz_name != null || point.is_quiz === true
   const isLastQuizCard = isQuiz && queueLen === 0
 
   const [phase, setPhase] = useState<Phase>(revealOnly ? 'revealed' : 'asking')
   const [eliminated, setEliminated] = useState<string[]>([])
   const [attempts, setAttempts] = useState(0)
-  const [picked, setPicked] = useState<string | null>(null)
-  const [correct, setCorrect] = useState(false)
   const [reaction, setReaction] = useState<'correct' | 'wrong'>('correct')
   const [frame, setFrame] = useState(0)
   const [voted, setVoted] = useState<'up' | 'down' | null>(null)
@@ -115,13 +118,27 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
       })
   }
 
+  function advance() {
+    const queueEmpty = useDriving.getState().queue.length === 0
+    if (isQuiz && queueEmpty && phase !== 'summary') {
+      setPhase('summary')
+      return
+    }
+    dismiss()
+  }
+
   function onPick(choice: string) {
     if (phase !== 'asking') return
-    setPicked(choice)
     const right = scored ? isCorrect(point, choice) : true
     report({ answer: choice })
+    // Intro/outro CTA: acknowledge and move on, no reaction/story.
+    if (isIntro) {
+      report({ answer: NEXT_EVENT })
+      advance()
+      return
+    }
     if (right) {
-      setCorrect(true)
+      setResult(point.id, true)
       setReaction('correct')
       setFrame(0)
       setPhase('reacting')
@@ -130,11 +147,9 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
       setAttempts(nextAttempts)
       setEliminated((e) => [...e, choice])
       setReaction('wrong')
-      if (nextAttempts < maxAttempts) {
-        retryRef.current = true
-      } else {
-        setCorrect(false)
-      }
+      // Only the final wrong attempt counts as the item's result.
+      if (nextAttempts < maxAttempts) retryRef.current = true
+      else setResult(point.id, false)
       setPhase('reacting')
     }
   }
@@ -147,15 +162,7 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
 
   function onContinue() {
     report({ answer: NEXT_EVENT })
-    // Genuinely the last quiz card (nothing left queued) → end-of-quiz summary.
-    // `last_quiz_item` is unreliable (backend sets it mid-quiz), so gate on an
-    // empty queue instead. Only for quizzes — the driving game streams forever.
-    const queueEmpty = useDriving.getState().queue.length === 0
-    if (isQuiz && queueEmpty && phase !== 'summary') {
-      setPhase('summary')
-      return
-    }
-    dismiss()
+    advance()
   }
 
   // No scoring info (rare types routed here defensively): just show + advance.
@@ -216,19 +223,14 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
                   phase === 'asking' && eliminated.includes(choice)
                 if (isGone) return null
                 const isRight =
-                  phase === 'revealed' &&
                   rightAnswer != null &&
                   normalize(choice) === normalize(rightAnswer)
-                const isPickWrong =
-                  phase === 'revealed' &&
-                  !correct &&
-                  picked != null &&
-                  normalize(choice) === normalize(picked) &&
-                  !isRight
+                // On reveal, collapse to just the correct answer (keeps the
+                // post-answer screen short — no scrolling past dead options).
+                if (phase === 'revealed' && !isRight) return null
                 const cls = [
                   'signpost',
-                  isRight ? 'signpost-right' : '',
-                  isPickWrong ? 'signpost-wrong' : '',
+                  phase === 'revealed' && isRight ? 'signpost-right' : '',
                 ]
                   .filter(Boolean)
                   .join(' ')
@@ -299,15 +301,19 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
           )}
         </div>
 
-        {/* Segmented progress */}
+        {/* Segmented progress — green=correct, red=wrong, grey=current/upcoming */}
         <div className="trivia-progress">
           {Array.from({ length: totalSegments }).map((_, i) => {
-            const cls =
-              i < currentIndex || (i === currentIndex && phase === 'revealed')
-                ? 'seg-done'
-                : i === currentIndex
-                  ? 'seg-active'
-                  : ''
+            const item = items[i]
+            const res = item ? results[item.id] : undefined
+            const answered = res !== undefined
+            const cls = answered
+              ? res
+                ? 'seg-correct'
+                : 'seg-wrong'
+              : i === currentIndex
+                ? 'seg-active'
+                : ''
             return <span key={i} className={`seg ${cls}`} />
           })}
         </div>

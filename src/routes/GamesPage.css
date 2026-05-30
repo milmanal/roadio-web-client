@@ -1,3 +1,14 @@
+/* Roadio-blue themed selection screen (matches the quiz card / zeplin). */
+.games-page {
+  min-height: 100dvh;
+  background: linear-gradient(180deg, #1b9fe0 0%, #2bb6e8 45%, #6fd0c4 100%);
+  color: #fff;
+}
+
+.games-page h1 {
+  color: #fff;
+}
+
 .games-list {
   list-style: none;
   margin: 16px 0 0;
@@ -11,17 +22,19 @@
   display: flex;
   gap: 12px;
   align-items: stretch;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: #fff;
+  color: #173a4a;
+  border: 0;
   border-radius: 16px;
   overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
 }
 
 .game-art {
   width: 104px;
   min-width: 104px;
   object-fit: cover;
-  background: var(--bg);
+  background: #dceaf2;
 }
 
 .game-info {

@@ -126,10 +126,13 @@ export default function GameCard() {
   const hasChoices = (point.answers?.length ?? 0) > 0
   const isQuizItem = point.quiz_name != null || point.is_quiz === true
   const isWebGame = !!point.html_template_name
-  if (kind === 'question' && hasChoices) {
+  // Anything with answer choices (question OR quantitative number-pick, on the
+  // map or in a quiz) → themed signpost card. Geoguess keeps its own map card.
+  if (hasChoices && kind !== 'geo') {
     return <TriviaCard key={point.id} point={point} />
   }
-  if (isQuizItem && !isWebGame && kind !== 'geo' && kind !== 'quant') {
+  // Quiz info/reveal cards (html/story, no choices, not a webview template).
+  if (isQuizItem && !isWebGame && kind !== 'geo') {
     return <TriviaCard key={point.id} point={point} />
   }
 

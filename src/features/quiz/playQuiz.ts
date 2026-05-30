@@ -38,7 +38,15 @@ export async function playQuiz({ quizId, quizName }: PlayQuizArgs): Promise<numb
     res = await fetchItems({ ...base, quiz: quizName })
   }
 
-  const items = res.items ?? []
+  // Drop degenerate follow-up "ack" items the backend appends (empty
+  // question/story with answers like ["1"]) — they render as a stray "1" card.
+  const items = (res.items ?? []).filter((it) => {
+    const blank = !it.question?.trim() && !it.story?.trim()
+    const ackOnly =
+      (it.answers ?? []).length <= 1 &&
+      (it.answers?.[0] ?? it.right_answer ?? '').trim() === '1'
+    return !(blank && ackOnly)
+  })
   driving.setItems(items)
 
   session.setHud({

@@ -51,7 +51,7 @@ export default function DailyPage() {
   }
 
   return (
-    <div className="page page-body">
+    <div className="page page-body daily-page">
       <h1>{t('daily', locale)}</h1>
 
       {state === 'loading' && <p className="muted">{t('loading', locale)}</p>}

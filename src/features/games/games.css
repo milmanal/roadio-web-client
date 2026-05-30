@@ -397,7 +397,15 @@
 }
 
 .seg-active {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.seg-correct {
   background: #7ed321;
+}
+
+.seg-wrong {
+  background: #ff6b6b;
 }
 
 .seg-done {
