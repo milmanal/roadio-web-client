@@ -21,7 +21,16 @@ the full trivia flow are written up in detail in **`MAP_PROGRESS.md`** — start
 | 5 GeoGuess + Mapbox GL JS | ✅ verified live | map renders, guess `[lat,lng]` → /v2/events 200 |
 | 6 Daily quiz + Geofence | ✅ verified live | quiz list, play→GameCard→/v2/events; fences load |
 | 7 Babylon premium | ✅ verified live | lead form→/v3/bavel_order + /v3/game_web_schedule 200 |
-| 8 PWA polish | ⬜ NEXT | offline precache, push token, code-split Mapbox |
+| 8 PWA polish | ✅ verified live | mapbox code-split (entry 2 MB→240 KB), runtime image cache, install prompt. Web-push deferred (needs VAPID key — BACKEND_NEEDS.md §4) |
+
+### Post-phase work (this session)
+- **#10 full trivia flow** ✅ (TriviaCard) — verified live.
+- **#11 Game Selection** ✅ (`/games`, native) + fixed the `fetch_markers` gate
+  that hid all map markers. Selecting a game = `POST /v2/items?quiz=` → markers.
+- **#12 Settings** ✅ (`/settings`). Leaderboard deferred (no endpoint).
+- **Dev driving simulator** ✅ (`useSimDrive`, preset routes, real markers).
+- **`BACKEND_NEEDS.md`** — what the backend must provide (all `*.roadio.io`
+  premium/info hosts are down: 503 / no DNS).
 
 ## How to run / verify
 ```bash

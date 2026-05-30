@@ -121,6 +121,26 @@ derived from `points_second_correct`; chaining uses `parent_id` ordering via the
 store queue. Reaction car PNGs are light line-art (look faint over blue) — real
 assets, fine. Tall `question_images` push NEXT below the fold (scroll) — v1 ok.
 
-## Other missing screens (tasks #11, #12)
-- Game Selection (`More games` button target) — zeplin "Games selction".
-- Settings + Leaderboard (avatar tap target).
+## Other screens — DONE
+- **#11 Game Selection** — `/routes/GamesPage.tsx` (route `/games`), wired from
+  the map "More games" button. Native list of the 4 official games (road game
+  `roadio`, daily, Babel `reg_496_dana`, Britania `reg_530_1`). Selecting =
+  `selectGame(quiz)` → `POST /v2/items?quiz=` → `has_game_selected=true`. Also
+  fixed `useMapMarkers` gating on `fetch_markers:false` (it hid ALL markers).
+  Verified: fresh guest selects road game → markers 0→178.
+- **#12 Settings** — `/routes/SettingsPage.tsx` (route `/settings`), wired from
+  the map avatar. Profile, he/en toggle, change-game, identity reset, version,
+  install-app button. **Leaderboard deferred** — no backend endpoint (all 404)
+  + premium webview 503. See `BACKEND_NEEDS.md`.
+
+## Dev driving simulator — DONE
+`useSimDrive` + 3 preset TLV routes (map dev row, DEV only). Fetches real
+`/v3/map_markers` for the route area and walks the car so proximity fires real
+questions; seeds known item ids if the user has no markers. 👤 button switches
+to a demo user with a selected game.
+
+## Backend blockers — see BACKEND_NEEDS.md
+All `*.roadio.io` premium/info hosts are down (apps 503, info domains no DNS):
+breaks the Babylon premium game, the original game-selection + leaderboard
+webviews. Needs: restored premium_url, a games-list + leaderboard JSON API, a
+VAPID push key, and a prod auth/CORS story.
