@@ -10,6 +10,7 @@ import type {
   EventsRequest,
   EventsResponse,
   FetchItemsRequest,
+  GameScheduleResponse,
   GeofenceResponse,
   MapMarkersRequest,
   MapMarkersResponse,
@@ -115,15 +116,40 @@ export function updatePurchase(req: PurchaseUpdateRequest): Promise<Configuratio
   return postJson<Configuration>('/v2/purchase_update', req)
 }
 
-/** Babylon premium game order. Form-encoded, per the backend handler. */
+/** Babylon premium game ("מכונת בבל"). game_id 496. */
+export const BABYLON_GAME_ID = '496'
+
+/**
+ * Babylon premium game order / lead-capture. Form-encoded, NO Basic auth
+ * (proxy adds it harmlessly). game_id defaults to 496.
+ * NOTE: response `status` is always "success" — gate UI on `message`, not status.
+ */
 export function bavelOrder(fields: {
-  game_id: string
   username: string
   phone_number?: string
+  game_id?: string
 }): Promise<BavelOrderResponse> {
   return postForm<BavelOrderResponse>('/v3/bavel_order', {
-    game_id: fields.game_id,
+    game_id: fields.game_id ?? BABYLON_GAME_ID,
     username: fields.username,
     phone_number: fields.phone_number ?? '',
+  })
+}
+
+/**
+ * Schedule a Babylon game session for a date. Form-encoded; mirrors bavelOrder.
+ * game_id defaults to 496. Same status/message gotcha as bavelOrder.
+ */
+export function gameWebSchedule(fields: {
+  username: string
+  phone_number?: string
+  picked_date: string
+  game_id?: string
+}): Promise<GameScheduleResponse> {
+  return postForm<GameScheduleResponse>('/v3/game_web_schedule', {
+    game_id: fields.game_id ?? BABYLON_GAME_ID,
+    username: fields.username,
+    phone_number: fields.phone_number ?? '',
+    picked_date: fields.picked_date,
   })
 }

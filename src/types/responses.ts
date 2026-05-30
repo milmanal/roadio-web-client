@@ -98,10 +98,18 @@ export interface GeofenceResponse {
   quiz?: string | null
 }
 
+/**
+ * POST /v3/bavel_order and /v3/game_web_schedule.
+ * GOTCHA: `status` is always "success" even on validation failure — the real
+ * result (and any error text) is in `message`, which MAY contain HTML.
+ */
 export interface BavelOrderResponse {
   message: string
   status: string
 }
+
+/** POST /v3/game_web_schedule — same shape as bavel_order. */
+export type GameScheduleResponse = BavelOrderResponse
 
 /** One quiz entry in POST /v2/user_quizzes (keyed by quiz name). */
 export interface UserQuiz {

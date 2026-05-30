@@ -22,6 +22,16 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     quizError: 'טעינת החידונים נכשלה. נסו שוב.',
     noQuizzes: 'אין חידונים זמינים כרגע.',
     noQuizItems: 'אין שאלות בחידון הזה כרגע.',
+    babylonTitle: 'מכונת בבל',
+    babylonIntro:
+      'משחק נהיגה פרימיום עם הדרכה אישית בוואטסאפ. השאירו פרטים ונשלח לכם קישור להתחלת המסע.',
+    namePlaceholder: 'שם מלא',
+    phonePlaceholder: 'מספר טלפון',
+    sendDetails: 'שלחו לי קישור',
+    sending: 'שולח…',
+    schedule: 'קביעת תאריך (לא חובה)',
+    scheduleSubmit: 'קבעו לי תאריך',
+    babylonError: 'אירעה שגיאה. נסו שוב.',
   },
   en: {
     drive: 'Drive',
@@ -36,6 +46,16 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     quizError: 'Failed to load quizzes. Try again.',
     noQuizzes: 'No quizzes available right now.',
     noQuizItems: 'This quiz has no questions right now.',
+    babylonTitle: 'Babel Machine',
+    babylonIntro:
+      'A premium driving quest with personal WhatsApp onboarding. Leave your details and we will send you a link to start.',
+    namePlaceholder: 'Full name',
+    phonePlaceholder: 'Phone number',
+    sendDetails: 'Send me a link',
+    sending: 'Sending…',
+    schedule: 'Schedule a date (optional)',
+    scheduleSubmit: 'Schedule me',
+    babylonError: 'Something went wrong. Try again.',
   },
 }
 
