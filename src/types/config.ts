@@ -50,7 +50,9 @@ export interface Configuration {
   gs_version?: string
   contest_logo?: string | null
   avatar_uri?: string | null
-  premium_url?: string // Babylon premium game URL
+  // premium_url (the dead app.roadio.io webview surface) is intentionally NOT
+  // consumed — Babylon renders natively (BabylonPage). The backend may still
+  // send it; it's tolerated via the index signature below.
   markers?: Record<string, unknown>
   /**
    * Server-driven marker art keyed by marker type
