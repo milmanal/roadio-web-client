@@ -93,16 +93,33 @@ Added `item_id` to `FetchItemsRequest` (`src/types/requests.ts`). Verified facts
 - Report answers → `POST /v2/events` `{events:{ "<id>":{answer} }}`; advance
   sentinel `answer:"next_event"`.
 
-## THEN — task #10 full trivia flow (the big next piece)
-Current `GameCard` is a one-shot bottom-sheet. The real flow (see
-`/Users/milman/Documents/Roadio/screenshots/` quiz shots): full-screen THEMED
-card; white **signpost/arrow** answer buttons; **multiple attempts**
-(`max_attempts`, `points_first_correct` vs `points_second_correct`); correct/
-wrong **reaction animation** (use `public/reactions/` van frames + "on fire!"
-banner); **post-answer story reveal** (story/story_images/story_voices) + a
-**thumbs up/down vote** (the `vote` event); chained follow-ups
-(`parent_id`/`parents`); bottom **Score / Place(bear badge) / Time** row + a
-segmented progress bar. Labels are English even in he UI.
+## task #10 full trivia flow — DONE (commit 19407ee, build+lint green)
+`src/features/games/cards/TriviaCard.tsx` — full-screen themed flow for
+multiple-choice `question` items. `GameCard` routes `kind==='question'` WITH
+answers → `TriviaCard` (self-contained, owns answer/vote/advance reporting via
+`reportEvents`); open free-text + other types keep the bottom-sheet.
+- Sky-blue gradient card; white **signpost** buttons (clip-path left arrow).
+- **Multiple attempts**: `maxAttempts = points_second_correct != null ? 2 : 1`.
+  Wrong answer is eliminated, reaction plays, returns to question for attempt 2.
+- Reaction layer: `public/reactions/correct_car_1..4` cycle (correct) /
+  `wrong_car` (wrong) + **"911 / This player is on fire!"** banner on correct.
+- Story reveal: right answer highlighted green, `story`/`story_images`/
+  `story_voices`, **👎/👍 vote** (`{vote}` event), NEXT (`next_event`).
+- Bottom **Score / Place (CSS bear badge) / Time** row (count-up, or countdown
+  from `point.countdown`) + segmented progress (segments = queue length + 1).
+- Chained follow-ups ride the existing queue/advance + `next_event` dismiss.
+- Footer/progress forced `direction:ltr` so order matches design under RTL.
+- Labels English even in he UI.
+**Live-verified in real Chrome (Playwright), PAGEERR=0:** proximity-injected
+item marker (id 2504735) → `/v2/items` live → card pops with real Q + 3
+signposts → wrong (קיץ) → wrong_car reaction → answer eliminated (2 left) →
+correct (סתיו) → on-fire banner → story reveal w/ green right answer → 👍 vote →
+NEXT dismisses. All 4 `/v2/events` POSTs correct shape (`{id:{answer}}`,
+`{id:{vote}}`, `{id:{answer:"next_event"}}`).
+NOTE: no `max_attempts`/`parents` field exists on the wire — `max_attempts`
+derived from `points_second_correct`; chaining uses `parent_id` ordering via the
+store queue. Reaction car PNGs are light line-art (look faint over blue) — real
+assets, fine. Tall `question_images` push NEXT below the fold (scroll) — v1 ok.
 
 ## Other missing screens (tasks #11, #12)
 - Game Selection (`More games` button target) — zeplin "Games selction".
