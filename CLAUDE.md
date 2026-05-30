@@ -21,9 +21,11 @@ There is no test runner wired yet.
 
 ## Backend connection (critical)
 
-The browser must NOT hold the backend's HTTP Basic credentials, and the backend has no CORS for these routes. So **all backend calls are prefixed with `/api` and forwarded by the Vite dev proxy** (`vite.config.ts`), which:
+The browser must NOT hold the backend's HTTP Basic credentials, and the backend has no CORS for these routes. So **all backend calls are prefixed with `/api` and forwarded by a proxy** (`vite.config.ts`, shared by both the dev server AND `vite preview`), which:
 - rewrites `/api/*` → backend root, and
 - injects `Authorization: Basic base64(BACKEND_BASIC_USER:BACKEND_BASIC_PASS)`.
+
+**Default backend is the LIVE Heroku URL** (baked into `vite.config.ts`, no `.env.local` needed) — `npm run dev` and `npm run preview` both hit remote out of the box. Set `BACKEND_URL=http://localhost:5050` in `.env.local` to target a local Flask backend instead. Note `vite preview` serves the production `dist/` build, so that's how you test the built app against remote; a standalone static deploy still needs its own reverse proxy/BFF serving `/api` with auth (the proxy only runs under dev/preview).
 
 Configure via `.env.local` (copy from `.env.example`): `BACKEND_URL`, `BACKEND_BASIC_USER`, `BACKEND_BASIC_PASS`, `VITE_MAPBOX_TOKEN`. Only `VITE_`-prefixed vars reach client code; the Basic creds stay in the proxy. **Production needs an equivalent reverse proxy / BFF** serving `/api` — this scheme is not production-shippable as-is.
 

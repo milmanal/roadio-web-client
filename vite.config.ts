@@ -1,4 +1,5 @@
 import { defineConfig, loadEnv } from 'vite'
+import type { ProxyOptions } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
@@ -6,14 +7,33 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
-  // Backend target + HTTP Basic creds. Defaults match the revived local Flask
-  // backend (roadio-master). Override via .env.local for other environments.
-  // Creds live ONLY in the dev proxy here — never shipped in the client bundle.
-  const backendTarget = env.BACKEND_URL || 'http://localhost:5000'
+  // Backend target + HTTP Basic creds. Defaults to the LIVE Heroku backend, so
+  // dev and preview hit remote out of the box. Override BACKEND_URL in
+  // .env.local (e.g. http://localhost:5050) to point at a local Flask backend.
+  // Creds live ONLY in the proxy here — never shipped in the client bundle.
+  const backendTarget =
+    env.BACKEND_URL || 'https://roadio-revive-ede3dca3face.herokuapp.com'
   const basicUser = env.BACKEND_BASIC_USER || 'shinom'
   const basicPass = env.BACKEND_BASIC_PASS || 'iloveToRide'
   const basicAuth =
     'Basic ' + Buffer.from(`${basicUser}:${basicPass}`).toString('base64')
+
+  // Shared proxy: forwards /api/* to the backend and injects Basic auth so the
+  // browser never holds credentials and CORS is sidestepped. Applied to both
+  // the dev server and `vite preview` (serving the production build).
+  const apiProxy: Record<string, ProxyOptions> = {
+    '/api': {
+      target: backendTarget,
+      changeOrigin: true,
+      secure: false,
+      rewrite: (p) => p.replace(/^\/api/, ''),
+      configure: (proxy) => {
+        proxy.on('proxyReq', (proxyReq) => {
+          proxyReq.setHeader('Authorization', basicAuth)
+        })
+      },
+    },
+  }
 
   return {
     plugins: [
@@ -46,23 +66,7 @@ export default defineConfig(({ mode }) => {
         },
       }),
     ],
-    server: {
-      host: true,
-      proxy: {
-        // All backend calls go through here. The proxy injects Basic auth so
-        // the browser never holds credentials and CORS is sidestepped.
-        '/api': {
-          target: backendTarget,
-          changeOrigin: true,
-          secure: false,
-          rewrite: (p) => p.replace(/^\/api/, ''),
-          configure: (proxy) => {
-            proxy.on('proxyReq', (proxyReq) => {
-              proxyReq.setHeader('Authorization', basicAuth)
-            })
-          },
-        },
-      },
-    },
+    server: { host: true, proxy: apiProxy },
+    preview: { host: true, proxy: apiProxy },
   }
 })
