@@ -114,7 +114,9 @@ export default function GameCard() {
   // multiple attempts, reaction animation, story reveal + vote). It owns its
   // own reporting/advance, so it renders outside the bottom-sheet shell.
   if (kind === 'question' && (point.answers?.length ?? 0) > 0) {
-    return <TriviaCard point={point} />
+    // key per item id so internal flow state (phase/attempts/vote) resets
+    // when the queue advances to the next question.
+    return <TriviaCard key={point.id} point={point} />
   }
 
   return (

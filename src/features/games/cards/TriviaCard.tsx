@@ -32,6 +32,7 @@ function fmtTime(total: number): string {
 export default function TriviaCard({ point }: { point: RoadPoint }) {
   const dismiss = useDriving((s) => s.dismissActive)
   const queueLen = useDriving((s) => s.queue.length)
+  const items = useDriving((s) => s.items)
   const position = useDriving((s) => s.position)
   const userId = useSession((s) => s.userId)
   const setHud = useSession((s) => s.setHud)
@@ -51,7 +52,6 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
   const [reaction, setReaction] = useState<'correct' | 'wrong'>('correct')
   const [frame, setFrame] = useState(0)
   const [voted, setVoted] = useState<'up' | 'down' | null>(null)
-  const [busy, setBusy] = useState(false)
 
   const latlng = {
     lat: position ? String(position.lat) : null,
@@ -92,27 +92,29 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
     return () => clearTimeout(id)
   }, [phase])
 
-  async function report(event: { answer?: string; vote?: string }) {
-    try {
-      const res = await reportEvents({
-        user_id: userId,
-        ...latlng,
-        events: { [String(point.id)]: event },
+  // Reports run in the background — the UI (reaction, reveal, advance) must not
+  // wait on the network. HUD updates from the response when it lands.
+  function report(event: { answer?: string; vote?: string }) {
+    reportEvents({
+      user_id: userId,
+      ...latlng,
+      events: { [String(point.id)]: event },
+    })
+      .then((res) => {
+        if (typeof res.score === 'number') {
+          setHud({ score: String(res.score), rank: String(res.rank) })
+        }
       })
-      if (typeof res.score === 'number') {
-        setHud({ score: String(res.score), rank: String(res.rank) })
-      }
-    } catch {
-      // advancing/scoring locally regardless of report failure
-    }
+      .catch(() => {
+        // advancing/scoring locally regardless of report failure
+      })
   }
 
-  async function onPick(choice: string) {
-    if (busy || phase !== 'asking') return
-    setBusy(true)
+  function onPick(choice: string) {
+    if (phase !== 'asking') return
     setPicked(choice)
     const right = scored ? isCorrect(point, choice) : true
-    await report({ answer: choice })
+    report({ answer: choice })
     if (right) {
       setCorrect(true)
       setReaction('correct')
@@ -130,26 +132,26 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
       }
       setPhase('reacting')
     }
-    setBusy(false)
   }
 
-  async function onVote(v: 'up' | 'down') {
+  function onVote(v: 'up' | 'down') {
     if (voted) return
     setVoted(v)
-    await report({ vote: v })
+    report({ vote: v })
   }
 
-  async function onContinue() {
-    if (busy) return
-    setBusy(true)
-    await report({ answer: NEXT_EVENT })
-    setBusy(false)
+  function onContinue() {
+    report({ answer: NEXT_EVENT })
     dismiss()
   }
 
   // No scoring info (rare types routed here defensively): just show + advance.
   const themeClass = `trivia trivia-theme-${point.marker_family || 'default'}`
-  const totalSegments = Math.max(1, queueLen + 1)
+  // Progress: a fixed segment per quiz item (stable across the whole quiz),
+  // filling as we advance. Falls back to queue length for a lone proximity item.
+  const idx = items.findIndex((it) => it.id === point.id)
+  const totalSegments = items.length > 0 ? items.length : Math.max(1, queueLen + 1)
+  const currentIndex = idx >= 0 ? idx : 0
   const onFire = phase === 'reacting' && reaction === 'correct'
 
   return (
@@ -205,7 +207,7 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
                   <button
                     key={choice}
                     className={cls}
-                    disabled={busy || phase === 'revealed'}
+                    disabled={phase === 'revealed'}
                     onClick={() => onPick(choice)}
                   >
                     {choice}
@@ -237,7 +239,7 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
                   👍
                 </button>
               </div>
-              <button className="next-btn" onClick={onContinue} disabled={busy}>
+              <button className="next-btn" onClick={onContinue}>
                 NEXT
               </button>
             </div>
@@ -246,12 +248,15 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
 
         {/* Segmented progress */}
         <div className="trivia-progress">
-          {Array.from({ length: totalSegments }).map((_, i) => (
-            <span
-              key={i}
-              className={`seg ${i === 0 ? (phase === 'revealed' ? 'seg-done' : 'seg-active') : ''}`}
-            />
-          ))}
+          {Array.from({ length: totalSegments }).map((_, i) => {
+            const cls =
+              i < currentIndex || (i === currentIndex && phase === 'revealed')
+                ? 'seg-done'
+                : i === currentIndex
+                  ? 'seg-active'
+                  : ''
+            return <span key={i} className={`seg ${cls}`} />
+          })}
         </div>
 
         {/* Score / Place / Time */}

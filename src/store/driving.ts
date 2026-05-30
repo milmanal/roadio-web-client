@@ -80,3 +80,8 @@ export const useDriving = create<DrivingState>((set, get) => ({
       activeCard: null,
     }),
 }))
+
+// Dev affordance: inspect/drive the store from the console (and Playwright).
+if (import.meta.env.DEV) {
+  ;(window as unknown as { __driving?: typeof useDriving }).__driving = useDriving
+}
