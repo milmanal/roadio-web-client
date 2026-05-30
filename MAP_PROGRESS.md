@@ -37,13 +37,15 @@ non-null→null so the answered item moves to seen_items + the ✓ icon.
 card pops with the real item content (3 choices, q text), `/v2/items?item_id=`
 returned 200, PAGEERR=0.
 
-**KNOWN GAP for next session:** the answer→`.feedback` step timed out in the
-headless test even with force-click — `.card-overlay` rendered the full question
-(card-q + media-img + card-story, 3 `.choice` buttons) but clicking a choice
-didn't surface `.feedback`. NOT the proximity code (that's proven). It's the
-existing `GameCard`/`QuestionCard` flow — investigate as part of task #10 (the
-full trivia flow rebuild). Could be RTL actionability or the live `/v2/events`
-await; stub `/v2/events` when testing.
+**ANSWER-CLICK BUG — FIXED (commit 08f920a).** Root cause: `GameCard` renders
+`.card-overlay`/`.card` but **no CSS ever styled them** — they were
+`position:static`, inline in normal flow, so the full-screen Mapbox canvas
+painted on top and intercepted every click (`elementFromPoint` over a choice
+returned `canvas.mapboxgl-canvas`, not the button). Added a fixed full-screen
+overlay (z-index 1000, above the map HUD's max of 4) + bottom-sheet `.card` to
+`games.css`. **Live-verified end-to-end in real Chrome:** GPS proximity → card
+pops → plain click on answer lands → `/v2/events` POST → `✓ נכון!` feedback +
+`choice-right`. Full chain works.
 
 NOTE: there is NO haversine stub anywhere — `src/lib/geo.ts distanceMeters` is
 already correct (a phantom tool result earlier suggested otherwise; ignore).
