@@ -105,3 +105,7 @@ button {
 .conn-error {
   border-color: var(--bad);
 }
+
+.route-fallback {
+  min-height: 100dvh;
+}

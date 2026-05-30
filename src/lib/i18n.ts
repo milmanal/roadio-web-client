@@ -64,6 +64,7 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     identity: 'זהות מכשיר',
     resetIdentity: 'איפוס זהות (אורח חדש)',
     appVersion: 'גרסה',
+    installApp: 'התקנת האפליקציה',
   },
   en: {
     drive: 'Drive',
@@ -120,6 +121,7 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     identity: 'Device identity',
     resetIdentity: 'Reset identity (new guest)',
     appVersion: 'Version',
+    installApp: 'Install app',
   },
 }
 

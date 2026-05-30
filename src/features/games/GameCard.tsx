@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Suspense, lazy, useState } from 'react'
 import { useDriving } from '../../store/driving'
 import { useSession } from '../../store/session'
 import { reportAnswer, reportEvents, NEXT_EVENT } from '../../api/endpoints'
@@ -10,8 +10,9 @@ import QuestionCard from './cards/QuestionCard'
 import QuantitativeCard from './cards/QuantitativeCard'
 import StoryCard from './cards/StoryCard'
 import WebGameCard from './cards/WebGameCard'
-import GeoGuessCard from './cards/GeoGuessCard'
 import FallbackCard from './cards/FallbackCard'
+// GeoGuessCard pulls in mapbox-gl — load it only when a geoguess card shows.
+const GeoGuessCard = lazy(() => import('./cards/GeoGuessCard'))
 import './games.css'
 
 const STORY_TYPES = new Set<RoadPointType>(['story', 'insta_story', 'narrator'])
@@ -32,7 +33,11 @@ function cardKind(point: RoadPoint): CardKind {
 function renderCard(kind: CardKind, props: CardProps) {
   switch (kind) {
     case 'geo':
-      return <GeoGuessCard {...props} />
+      return (
+        <Suspense fallback={<div className="card-inner" />}>
+          <GeoGuessCard {...props} />
+        </Suspense>
+      )
     case 'quant':
       return <QuantitativeCard {...props} />
     case 'web':

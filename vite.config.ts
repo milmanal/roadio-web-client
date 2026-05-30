@@ -63,9 +63,25 @@ export default defineConfig(({ mode }) => {
         workbox: {
           // API responses are dynamic + auth'd; never precache /api.
           navigateFallbackDenylist: [/^\/api/],
+          // The lazy mapbox-gl chunk is ~1.8 MB — allow precaching it.
+          maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+          // Cache remote static art (marker/reaction/game icons) at runtime.
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/raw\.githubusercontent\.com\/.*/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'roadio-remote-img',
+                expiration: { maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+          ],
         },
       }),
     ],
+    // mapbox-gl is an intentionally code-split lazy chunk; don't warn on it.
+    build: { chunkSizeWarningLimit: 1900 },
     server: { host: true, proxy: apiProxy },
     preview: { host: true, proxy: apiProxy },
   }
