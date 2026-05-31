@@ -1,119 +1,176 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { bavelOrder, gameWebSchedule } from '../api/endpoints'
+import { useNavigate } from 'react-router-dom'
+import { getMoods, getTowns, registerUser } from '../api/endpoints'
+import { selectGame } from '../features/games/selectGame'
 import { useSession } from '../store/session'
+import { useDriving } from '../store/driving'
 import { t } from '../lib/i18n'
-import './BabylonPage.css'
+import type { Mood, Town } from '../types'
+import './RegistrationPage.css'
 
+const BABEL_GAME_ID = 496
+const BABEL_QUIZ = 'reg_496_dana'
+
+// "מכונת בבל" — a premium road-quest. Activated via registration (NOT the old
+// lead/download form, which served the dead native app): trigger the babel reg
+// flow (quiz reg_496_dana), then POST /v2/register with game_id 496 +
+// nickname/phone/destination. The quest then streams road points as you drive.
 export default function BabylonPage() {
-  const { locale } = useSession()
+  const navigate = useNavigate()
+  const { userId, locale, setHud } = useSession()
+  const setConfig = useDriving((s) => s.setConfig)
 
-  const [name, setName] = useState('')
+  const [nickname, setNickname] = useState('')
   const [phone, setPhone] = useState('')
-  const [pickedDate, setPickedDate] = useState('')
+  const [destination, setDestination] = useState('')
+  const [email, setEmail] = useState('')
+  const [contest, setContest] = useState(true)
+  const [townId, setTownId] = useState('')
+  const [moodId, setMoodId] = useState('')
+  const [gameCode, setGameCode] = useState('')
+  const [towns, setTowns] = useState<Town[]>([])
+  const [moods, setMoods] = useState<Mood[]>([])
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(false)
 
-  const [ordering, setOrdering] = useState(false)
-  const [scheduling, setScheduling] = useState(false)
+  useEffect(() => {
+    getTowns().then(setTowns).catch(() => {})
+    getMoods().then(setMoods).catch(() => {})
+  }, [])
 
-  // Backend `message` may contain trusted HTML (<br>, <a href>). We render it
-  // verbatim like WebGameCard does. `status` is unreliable (always "success"),
-  // so success/error UI is driven only by whether a message came back.
-  const [orderMsg, setOrderMsg] = useState<string | null>(null)
-  const [scheduleMsg, setScheduleMsg] = useState<string | null>(null)
-
-  async function onOrder(e: FormEvent) {
+  async function onSubmit(e: FormEvent) {
     e.preventDefault()
-    if (ordering) return
-    setOrdering(true)
-    setOrderMsg(null)
+    if (busy || !nickname.trim()) return
+    setBusy(true)
+    setError(false)
     try {
-      const res = await bavelOrder({
-        username: name.trim(),
+      // 1) trigger the babel registration flow, 2) register with game_id 496.
+      await selectGame(BABEL_QUIZ)
+      const cfg = await registerUser({
+        userId,
+        game_id: BABEL_GAME_ID,
+        nickname: nickname.trim(),
         phone_number: phone.trim(),
+        destination: destination.trim(),
+        email: email.trim(),
+        join_contest: contest,
+        town_id: townId || null,
+        mood_id: moodId || null,
+        game_code: gameCode.trim(),
       })
-      setOrderMsg(res.message || '')
-    } catch {
-      setOrderMsg(t('babylonError', locale))
-    } finally {
-      setOrdering(false)
-    }
-  }
-
-  async function onSchedule(e: FormEvent) {
-    e.preventDefault()
-    if (scheduling) return
-    setScheduling(true)
-    setScheduleMsg(null)
-    try {
-      const res = await gameWebSchedule({
-        username: name.trim(),
-        phone_number: phone.trim(),
-        picked_date: pickedDate,
+      setConfig(cfg)
+      setHud({
+        username: cfg.username ?? nickname.trim(),
+        userLabel: cfg.user_label ?? '',
+        avatar: cfg.profile_image ?? null,
+        gameName: cfg.game_name ?? null,
       })
-      setScheduleMsg(res.message || '')
+      // Babel is a driving quest — head to the map; road points unlock en route.
+      navigate('/drive')
     } catch {
-      setScheduleMsg(t('babylonError', locale))
+      setError(true)
     } finally {
-      setScheduling(false)
+      setBusy(false)
     }
   }
 
   return (
-    <div className="page page-body">
-      <h1>{t('babylonTitle', locale)}</h1>
-      <p className="muted babylon-intro">{t('babylonIntro', locale)}</p>
+    <div className="page page-body reg-page">
+      <h1 className="reg-title">{t('babylonTitle', locale)}</h1>
+      <p className="reg-intro">{t('babylonIntro', locale)}</p>
+      {error && <div className="conn conn-error">{t('registerError', locale)}</div>}
 
-      <form className="babylon-form" onSubmit={onOrder}>
+      <form className="reg-form" onSubmit={onSubmit}>
         <input
-          className="babylon-input"
-          type="text"
-          placeholder={t('namePlaceholder', locale)}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          autoComplete="name"
+          className="reg-input"
+          placeholder={t('nicknameLabel', locale)}
+          value={nickname}
+          onChange={(e) => setNickname(e.target.value)}
+          required
         />
         <input
-          className="babylon-input"
+          className="reg-input"
           type="tel"
           placeholder={t('phonePlaceholder', locale)}
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           autoComplete="tel"
         />
-        <button type="submit" disabled={ordering}>
-          {ordering ? t('sending', locale) : t('sendDetails', locale)}
-        </button>
-      </form>
-
-      {orderMsg != null && (
-        <div
-          className="conn babylon-msg"
-          dangerouslySetInnerHTML={{ __html: orderMsg }}
-        />
-      )}
-
-      <form className="babylon-form babylon-schedule" onSubmit={onSchedule}>
-        <label className="muted small babylon-label" htmlFor="babylon-date">
-          {t('schedule', locale)}
-        </label>
+        {/* destination = "לאן נוסעים?" — originally a Places autocomplete; a
+            native picker (Mapbox geocoding) is a follow-up. Free text for now. */}
         <input
-          id="babylon-date"
-          className="babylon-input"
-          type="date"
-          value={pickedDate}
-          onChange={(e) => setPickedDate(e.target.value)}
+          className="reg-input"
+          placeholder={t('destinationLabel', locale)}
+          value={destination}
+          onChange={(e) => setDestination(e.target.value)}
         />
-        <button type="submit" disabled={scheduling || !pickedDate}>
-          {scheduling ? t('sending', locale) : t('scheduleSubmit', locale)}
+        <input
+          className="reg-input"
+          type="email"
+          placeholder={t('emailLabel', locale)}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+
+        <div className="reg-field-lbl">{t('joinContest', locale)}</div>
+        <div className="reg-toggle">
+          <button
+            type="button"
+            className={`reg-toggle-btn ${contest ? 'reg-toggle-on' : ''}`}
+            onClick={() => setContest(true)}
+          >
+            {t('yes', locale)}
+          </button>
+          <button
+            type="button"
+            className={`reg-toggle-btn ${!contest ? 'reg-toggle-on' : ''}`}
+            onClick={() => setContest(false)}
+          >
+            {t('no', locale)}
+          </button>
+        </div>
+
+        <select
+          className="reg-input reg-select"
+          value={townId}
+          onChange={(e) => setTownId(e.target.value)}
+        >
+          <option value="">{t('townLabel', locale)}</option>
+          {towns.map((tn) => (
+            <option key={tn.id} value={String(tn.id)}>
+              {tn.name}
+            </option>
+          ))}
+        </select>
+
+        <div className="reg-field-lbl">{t('moodLabel', locale)}</div>
+        <div className="reg-moods">
+          {moods.map((m) => (
+            <button
+              type="button"
+              key={m.mood_id}
+              className={`reg-mood ${moodId === m.mood_id ? 'reg-mood-on' : ''}`}
+              onClick={() => setMoodId(m.mood_id)}
+              title={m.label}
+            >
+              <img src={m.icon_url} alt="" />
+              <span>{m.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <input
+          className="reg-input"
+          placeholder={t('gameCodeLabel', locale)}
+          value={gameCode}
+          onChange={(e) => setGameCode(e.target.value)}
+        />
+
+        <button className="reg-submit" type="submit" disabled={busy || !nickname.trim()}>
+          {busy ? t('sending', locale) : t('babylonStart', locale)}
         </button>
       </form>
-
-      {scheduleMsg != null && (
-        <div
-          className="conn babylon-msg"
-          dangerouslySetInnerHTML={{ __html: scheduleMsg }}
-        />
-      )}
     </div>
   )
 }

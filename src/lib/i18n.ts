@@ -83,6 +83,8 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     registerSubmit: 'זהו',
     registerError: 'ההרשמה נכשלה. נסו שוב.',
     profileEmpty: 'עדיין אין נתונים',
+    destinationLabel: '?לאן נוסעים',
+    babylonStart: 'יוצאים לדרך',
   },
   en: {
     drive: 'Drive',
@@ -158,6 +160,8 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     registerSubmit: 'Done',
     registerError: 'Registration failed. Try again.',
     profileEmpty: 'No data yet',
+    destinationLabel: 'Where to?',
+    babylonStart: 'Start the journey',
   },
 }
 

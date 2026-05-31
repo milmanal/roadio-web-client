@@ -135,26 +135,38 @@ export function getMoods(): Promise<Mood[]> {
   return getJson<{ moods: Mood[] }>('/v2/moods').then((r) => r.moods ?? [])
 }
 
-/** Register/link a named user. Returns the refreshed configuration. */
+/**
+ * Register/link a named user. Returns the refreshed configuration.
+ * Babel road-quest (game_id 496) adds phone_number + destination ("where to?")
+ * on top of the generic fields; trigger its flow first with
+ * selectGame('reg_496_dana'), then register with game_id 496.
+ */
 export function registerUser(fields: {
   userId: string
-  email: string
+  email?: string
   nickname: string
   join_contest: boolean
   town_id?: number | string | null
   mood_id?: string | null
   game_code?: string | null
+  game_id?: number | null
+  phone_number?: string | null
+  destination?: string | null
 }): Promise<Configuration> {
-  return postJson<Configuration>('/v2/register', {
+  // /v2/register responds { configuration, status } — unwrap to the config.
+  return postJson<{ configuration: Configuration; status?: string }>('/v2/register', {
     user_id: fields.userId,
     version: APP_VERSION,
-    email: fields.email,
+    email: fields.email ?? '',
     nickname: fields.nickname,
     join_contest: fields.join_contest,
     town_id: fields.town_id ?? null,
     mood_id: fields.mood_id ?? null,
     game_code: fields.game_code ?? '',
-  })
+    game_id: fields.game_id ?? undefined,
+    phone_number: fields.phone_number ?? undefined,
+    destination: fields.destination ?? undefined,
+  }).then((r) => r.configuration)
 }
 
 export function subscribePush(req: PushTokenRequest): Promise<unknown> {
