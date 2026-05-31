@@ -1,13 +1,12 @@
 // Production BFF / reverse-proxy (Vercel Edge Function).
 //
-// Mirrors the Vite dev/preview proxy: the browser calls same-origin `/api/*`
-// with NO credentials; this function rewrites to the backend root and injects
-// the HTTP Basic header server-side, so the secret never reaches the client.
+// The browser calls same-origin `/api/*` with NO credentials; vercel.json
+// rewrites `/api/:path*` → `/api/proxy?path=:path*`, and this function forwards
+// to the backend with the HTTP Basic header injected server-side. The secret
+// never reaches the client (same role as the Vite dev/preview proxy).
 //
 // Env (set in the Vercel project, NOT committed):
 //   BACKEND_URL, BACKEND_BASIC_USER, BACKEND_BASIC_PASS
-//
-// Vercel auto-mounts this catch-all at /api/* — no route config needed.
 
 export const config = { runtime: 'edge' }
 
@@ -23,8 +22,13 @@ const AUTH =
 
 export default async function handler(req: Request): Promise<Response> {
   const url = new URL(req.url)
-  // /api/v2/items?x=1  ->  <backend>/v2/items?x=1
-  const target = BACKEND + url.pathname.replace(/^\/api/, '') + url.search
+  // The rewrite puts the real backend path in ?path=… ; the rest of the query
+  // (e.g. ?locale=he) is merged in by Vercel and forwarded as-is.
+  const params = new URLSearchParams(url.search)
+  const path = params.get('path') ?? ''
+  params.delete('path')
+  const qs = params.toString()
+  const target = `${BACKEND}/${path}${qs ? `?${qs}` : ''}`
 
   const headers = new Headers(req.headers)
   headers.set('authorization', AUTH)
@@ -40,7 +44,6 @@ export default async function handler(req: Request): Promise<Response> {
   const respHeaders = new Headers()
   const ct = upstream.headers.get('content-type')
   if (ct) respHeaders.set('content-type', ct)
-  // API responses are dynamic + auth'd — never cache.
   respHeaders.set('cache-control', 'no-store')
 
   return new Response(upstream.body, {

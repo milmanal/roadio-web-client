@@ -152,9 +152,25 @@ Both legacy webview screens now have JSON APIs (all HTTP Basic). Build natively.
 per-entry avatar, as requested); `me.avatar` carries the header avatar. `daily`/`towns`
 may be empty until gameplay/data accrues — shapes are final.
 
-**`POST /v2/register`** `{user_id, email, nickname, join_contest, town_id, mood_id,
-game_code, game_id?, version?}` → `{status, configuration:{...}}` (the refreshed config
-object). Persists via the same path the native registration used.
+**`POST /v2/register`** → `{status, configuration:{...}}` (refreshed config). Covers
+the generic signup AND the dedicated babel road-quest form (which adds destination +
+phone). Body:
+`{user_id, game_id?, nickname, email, join_contest, town_id, mood_id, game_code,
+phone_number?, destination?, quest_phones?, version?}`
+- For **babel/game 496**, pass `game_id:496` + `nickname` + `phone_number` + `destination`
+  ("לאן נוסעים?", the original used Google Places autocomplete — rebuild the picker
+  client-side, send the chosen string). Verified: returns config with
+  `game_id:496, game_name:"מכונת בבל", is_road_quest:true`.
+
+### Starting the Babel game (game 496) — the flow
+The "send me the link / pick a date" screen is a **download funnel for the dead native
+app — skip it on web.** To start the game:
+1. `POST /v2/items {user_id, quiz:"reg_496_dana"}` — trigger the babel reg flow
+2. `POST /v2/register {user_id, game_id:496, nickname, phone_number, destination, ...}`
+   — **activates the game** (config flips to game_id 496 / is_road_quest)
+3. `/v2/items` + `/v3/map_markers` then serve the quest. It's a **driving game** —
+   road-point items/markers unlock by location as you move along the route; at a
+   standstill you see the start mission only (items:0 sitting still is normal).
 
 **`GET /v2/towns?game_id=`** → `{towns:[{id,name}]}` — the ישוב dropdown (per game;
 empty if that game has no settlements configured).
