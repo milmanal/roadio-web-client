@@ -132,11 +132,28 @@ export default function MapScreen() {
   )
   const [destEditing, setDestEditing] = useState(false)
   const [destDraft, setDestDraft] = useState('')
+  const [destSuggestions, setDestSuggestions] = useState<string[]>([])
+  const destDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function fetchDestSuggestions(query: string) {
+    if (destDebounce.current) clearTimeout(destDebounce.current)
+    if (query.length < 2) { setDestSuggestions([]); return }
+    destDebounce.current = setTimeout(async () => {
+      try {
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&language=he&country=IL&types=place,locality,neighborhood,address&limit=3`
+        const res = await fetch(url)
+        const data = await res.json()
+        setDestSuggestions((data.features ?? []).map((f: { place_name: string }) => f.place_name))
+      } catch { setDestSuggestions([]) }
+    }, 300)
+  }
+
   function saveDestination(v: string) {
     const val = v.trim()
     setDestination(val)
     sessionStorage.setItem('roadio.destination', val)
     setDestEditing(false)
+    setDestSuggestions([])
   }
 
   // Map screen drives the whole live loop.
@@ -512,18 +529,32 @@ export default function MapScreen() {
       {/* Destination prompt chip */}
       {destEditing ? (
         <div className="map-dest-edit">
-          <input
-            className="map-dest-input"
-            autoFocus
-            placeholder={t('destinationLabel', locale)}
-            defaultValue={destination}
-            onChange={(e) => setDestDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') saveDestination(destDraft || (e.target as HTMLInputElement).value)
-              if (e.key === 'Escape') setDestEditing(false)
-            }}
-          />
-          <button className="map-dest-ok" onClick={() => saveDestination(destDraft)}>✓</button>
+          {destSuggestions.length > 0 && (
+            <div className="map-dest-suggestions">
+              {destSuggestions.map((s, i) => (
+                <button key={i} className="map-dest-sug-item" onMouseDown={() => saveDestination(s)}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="map-dest-row">
+            <input
+              className="map-dest-input"
+              autoFocus
+              placeholder={t('destinationLabel', locale)}
+              defaultValue={destination}
+              onChange={(e) => {
+                setDestDraft(e.target.value)
+                fetchDestSuggestions(e.target.value)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveDestination(destDraft || (e.target as HTMLInputElement).value)
+                if (e.key === 'Escape') { setDestEditing(false); setDestSuggestions([]) }
+              }}
+            />
+            <button className="map-dest-ok" onClick={() => saveDestination(destDraft)}>✓</button>
+          </div>
         </div>
       ) : (
         <button

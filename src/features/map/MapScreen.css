@@ -309,7 +309,7 @@
 .map-dest-chip {
   position: absolute;
   z-index: 3;
-  bottom: 64px;
+  bottom: 72px;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(255, 255, 255, 0.92);
@@ -329,11 +329,17 @@
 
 .map-dest-edit {
   position: absolute;
-  z-index: 3;
-  bottom: 58px;
+  z-index: 20;
+  bottom: 66px;
   left: 50%;
   transform: translateX(-50%);
   width: min(82%, 360px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.map-dest-row {
   display: flex;
   gap: 6px;
   align-items: center;
@@ -342,12 +348,43 @@
 .map-dest-input {
   flex: 1;
   background: #fff;
+  color: #173a4a;
   border: 2px solid #36c0f6;
   border-radius: 12px;
   padding: 8px 14px;
   font-size: 15px;
   direction: rtl;
   outline: none;
+}
+
+.map-dest-suggestions {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  overflow: hidden;
+  order: -1; /* appear above the input row */
+}
+
+.map-dest-sug-item {
+  padding: 11px 14px;
+  font-size: 14px;
+  color: #173a4a;
+  direction: rtl;
+  text-align: right;
+  cursor: pointer;
+  width: 100%;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  display: block;
+}
+
+.map-dest-sug-item:last-child {
+  border-bottom: 0;
+}
+
+.map-dest-sug-item:active {
+  background: #f0f4f8;
 }
 
 .map-dest-ok {
