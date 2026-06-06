@@ -92,6 +92,13 @@
   position: relative;
   display: inline-block;
   line-height: 0;
+  /* No transition here — Mapbox owns this translate; adding transition causes
+     the car to lag behind the map during easeTo panning. */
+}
+/* Inner wrapper owns rotation only — CSS transition here is safe. */
+.mk-user-inner {
+  transition: transform 500ms linear;
+  will-change: transform;
 }
 .mk-user-van {
   display: block;

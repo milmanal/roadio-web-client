@@ -332,12 +332,19 @@ export default function MapScreen() {
     if (!map || !position) return
     const ll: [number, number] = [position.lng, position.lat]
 
-    // Always keep the car marker on the correct spot.
+    const { heading, speed } = position
+    const moving = (speed ?? 0) > 1
+    const stopped = (speed ?? 0) < 0.5
+
+    // Create marker on first fix; CSS transition on the element handles smooth
+    // repositioning between ticks (Mapbox sets transform internally).
     if (!userCarRef.current) {
       const el = document.createElement('div')
       el.className = 'mk-user'
+      // Inner wrapper handles rotation with CSS transition; outer el is
+      // translated by Mapbox (no transition there — avoids lag during easeTo).
       el.innerHTML =
-        '<span class="mk-user-radius"></span><img class="mk-user-van" src="/car.png" alt="" />'
+        '<div class="mk-user-inner"><span class="mk-user-radius"></span><img class="mk-user-van" src="/car.png" alt="" /></div>'
       userCarRef.current = new mapboxgl.Marker({ element: el, anchor: 'center' })
         .setLngLat(ll)
         .addTo(map)
@@ -345,19 +352,23 @@ export default function MapScreen() {
       userCarRef.current.setLngLat(ll)
     }
 
-    const { heading, speed } = position
-    const moving = (speed ?? 0) > 1
-    const stopped = (speed ?? 0) < 0.5
+    // Rotate inner wrapper via CSS (transition there = smooth rotation).
+    const inner = userCarRef.current.getElement().querySelector<HTMLElement>('.mk-user-inner')
+    if (inner) {
+      inner.style.transform = heading != null && moving ? `rotate(${heading}deg)` : 'rotate(0deg)'
+    }
 
     if (!didCenter.current) {
-      map.jumpTo({ center: ll, zoom: 15, bearing: heading ?? 0 })
+      map.jumpTo({ center: ll, zoom: 15, bearing: 0 })
       didCenter.current = true
       return
     }
 
-    // Build one camera transition: center (when following) + bearing (when moving).
-    const opts: Parameters<mapboxgl.Map['easeTo']>[0] = { duration: 400 }
+    // Single easeTo: center + bearing in one call.
+    const opts: Parameters<mapboxgl.Map['easeTo']>[0] = { duration: 500 }
     if (following) opts.center = ll
+    // Map stays north-up; car icon rotation handles heading feedback.
+    // Only rotate map when heading changes significantly (avoid jitter).
     if (heading != null && moving) opts.bearing = heading
     else if (stopped) opts.bearing = 0
 
