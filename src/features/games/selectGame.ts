@@ -7,7 +7,7 @@
 // Unlike playQuiz, this does NOT trigger cards — it only establishes the active
 // game; the map's driving loop + proximity surface road points as you drive.
 
-import { fetchItems } from '../../api/endpoints'
+import { fetchItems, leaveGame } from '../../api/endpoints'
 import { useSession } from '../../store/session'
 import { useDriving } from '../../store/driving'
 
@@ -16,6 +16,15 @@ export async function selectGame(quiz: string): Promise<boolean> {
   const session = useSession.getState()
   const driving = useDriving.getState()
   const pos = driving.position
+
+  // If the user is currently in an org-quest (e.g. babel), clear that state
+  // first — /v2/leave_game resets org_game_id/org_game_active server-side so
+  // the next fetchItems picks up the new game. Without this, switching back to
+  // trivia from babel leaves the user stuck in the org-game.
+  const cfg = driving.config
+  if (cfg?.is_road_quest || cfg?.is_quest) {
+    await leaveGame(session.userId).catch(() => {})
+  }
 
   const res = await fetchItems({
     user_id: session.userId,

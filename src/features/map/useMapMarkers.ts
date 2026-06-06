@@ -28,9 +28,15 @@ export function useMapMarkers(active: boolean) {
     const session = useSession.getState
     const markers = useMarkers.getState
 
+    // In DEV with no GPS (e.g. testing at a desk), fall back to TLV centre so
+    // the first markers fetch fires and the map isn't empty after sign-in.
+    const DEV_FALLBACK: Position | null = import.meta.env.DEV
+      ? { lat: 32.0853, lng: 34.7818, ts: 0 }
+      : null
+
     async function fetchMarkers(force = false) {
       if (inFlight.current) return
-      const pos = driving().position
+      const pos = driving().position ?? (firstDone.current ? null : DEV_FALLBACK)
       if (!pos) return
       // NOTE: do NOT gate on config.fetch_markers — it is false even for users
       // who have a game selected and ~178 markers (it toggles background/driving

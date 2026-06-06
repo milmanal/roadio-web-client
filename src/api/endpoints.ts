@@ -169,6 +169,14 @@ export function registerUser(fields: {
   }).then((r) => r.configuration)
 }
 
+/** Leave the current org-game (e.g. babel 496), returning user to trivia mode. */
+export function leaveGame(userId: string): Promise<{ status: string }> {
+  return postJson<{ status: string }>('/v2/leave_game', {
+    user_id: userId,
+    version: APP_VERSION,
+  })
+}
+
 export function subscribePush(req: PushTokenRequest): Promise<unknown> {
   return postJson<unknown>('/v2/push_notif_token', req)
 }
