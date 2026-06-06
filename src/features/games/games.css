@@ -350,6 +350,8 @@
 .vote-q {
   font-weight: 800;
   font-size: 17px;
+  direction: rtl;
+  unicode-bidi: plaintext;
 }
 
 .vote {

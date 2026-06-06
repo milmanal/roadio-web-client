@@ -4,6 +4,7 @@ import { useSession } from '../../../store/session'
 import { reportEvents, NEXT_EVENT } from '../../../api/endpoints'
 import { isCorrect, isScored, normalize } from '../answer'
 import { MediaBlock } from '../MediaBlock'
+import { t } from '../../../lib/i18n'
 import type { RoadPoint } from '../../../types'
 
 const CORRECT_FRAMES = [
@@ -37,6 +38,7 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
   const setResult = useDriving((s) => s.setResult)
   const position = useDriving((s) => s.position)
   const userId = useSession((s) => s.userId)
+  const locale = useSession((s) => s.locale)
   const setHud = useSession((s) => s.setHud)
   const score = useSession((s) => s.score)
   const rank = useSession((s) => s.rank)
@@ -274,7 +276,7 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
                 >
                   👎
                 </button>
-                <span className="vote-q">Did you like the question?</span>
+                <span className="vote-q">{t('voteQuestion', locale)}</span>
                 <button
                   className={`vote vote-up ${voted === 'up' ? 'vote-on' : ''}`}
                   onClick={() => onVote('up')}
@@ -284,7 +286,7 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
                 </button>
               </div>
               <button className="next-btn" onClick={onContinue}>
-                {isLastQuizCard ? 'FINISH' : 'NEXT'}
+                {isLastQuizCard ? t('finishQuiz', locale) : t('nextCard', locale)}
               </button>
             </div>
           )}
