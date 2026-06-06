@@ -325,11 +325,14 @@ export default function MapScreen() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Follow the user + keep the user's car marker on their position.
+  // Follow user + rotate to heading in ONE easeTo call so they don't cancel each other.
+  // Two separate easeTo calls on the same tick = the second cancels the first → car drifts off screen.
   useEffect(() => {
     const map = mapRef.current
     if (!map || !position) return
     const ll: [number, number] = [position.lng, position.lat]
+
+    // Always keep the car marker on the correct spot.
     if (!userCarRef.current) {
       const el = document.createElement('div')
       el.className = 'mk-user'
@@ -341,27 +344,25 @@ export default function MapScreen() {
     } else {
       userCarRef.current.setLngLat(ll)
     }
-    if (!didCenter.current) {
-      map.jumpTo({ center: ll, zoom: 15 })
-      didCenter.current = true
-    } else if (following) {
-      map.easeTo({ center: ll, duration: 800 })
-    }
-  }, [position, following])
 
-  // Rotate map to match driving heading. Only when heading is valid AND moving
-  // (speed > 1 m/s ≈ 3.6 km/h) — keeps map north-up when stationary.
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map || !position) return
     const { heading, speed } = position
-    if (heading != null && (speed ?? 0) > 1) {
-      map.easeTo({ bearing: heading, duration: 400 })
-    } else if ((speed ?? 0) < 0.5) {
-      // snap back to north when clearly stopped
-      map.easeTo({ bearing: 0, duration: 800 })
+    const moving = (speed ?? 0) > 1
+    const stopped = (speed ?? 0) < 0.5
+
+    if (!didCenter.current) {
+      map.jumpTo({ center: ll, zoom: 15, bearing: heading ?? 0 })
+      didCenter.current = true
+      return
     }
-  }, [position])
+
+    // Build one camera transition: center (when following) + bearing (when moving).
+    const opts: Parameters<mapboxgl.Map['easeTo']>[0] = { duration: 400 }
+    if (following) opts.center = ll
+    if (heading != null && moving) opts.bearing = heading
+    else if (stopped) opts.bearing = 0
+
+    if (opts.center || opts.bearing != null) map.easeTo(opts)
+  }, [position, following])
 
   // Auto-zoom so the nearest item stays visible. Uses cameraForBounds to
   // compute the zoom needed to show both user and nearest pin, then easeTo
