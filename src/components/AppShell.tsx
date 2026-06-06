@@ -9,6 +9,7 @@ export default function AppShell() {
   // The map screen is full-screen (own top HUD + corner pills) — no tab bar.
   const showNav = pathname !== '/drive'
   const tabs = [
+    { to: '/drive', label: t('drive', locale), icon: '🗺️' },
     { to: '/daily', label: t('daily', locale), icon: '🧩' },
     { to: '/babylon', label: t('babylon', locale), icon: '🏛️' },
   ]
