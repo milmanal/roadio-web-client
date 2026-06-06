@@ -97,6 +97,17 @@ function seedMarkers(waypoints: LL[]): MapMarker[] {
   }))
 }
 
+/** Compass bearing (0–360°N) from `from` to `to`. */
+function bearingDeg(from: LL, to: LL): number {
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const dLng = toRad(to.lng - from.lng)
+  const lat1 = toRad(from.lat)
+  const lat2 = toRad(to.lat)
+  const y = Math.sin(dLng) * Math.cos(lat2)
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng)
+  return (Math.atan2(y, x) * (180 / Math.PI) + 360) % 360
+}
+
 /** Step `from` toward `to` by up to `meters`; reached=true when it arrives. */
 function stepToward(from: LL, to: LL, meters: number): { pos: LL; reached: boolean } {
   const d = distanceMeters(from.lat, from.lng, to.lat, to.lng)
@@ -124,8 +135,11 @@ export function useSimDrive(routeId: string | null) {
     const waypoints = route.waypoints
     const start = waypoints[0]
 
-    // Plant the car at the start immediately so the map recentres there.
-    driving().setPosition({ ...start, accuracy: 5, speed: null, ts: 0 } as Position)
+    // Plant the car at the start with heading toward first waypoint.
+    driving().setPosition({
+      ...start, accuracy: 5, speed: null,
+      heading: bearingDeg(start, waypoints[1] ?? start), ts: 0,
+    } as Position)
 
     async function begin() {
       // Pull the real markers for this area; seed if the user has none.
@@ -172,7 +186,11 @@ export function useSimDrive(routeId: string | null) {
         cursor = pos
         if (reached) leg += 1
         tick += 1
-        driving().setPosition({ ...cursor, accuracy: 5, speed: 14, ts: tick } as Position)
+        const target = waypoints[Math.min(leg, waypoints.length - 1)]
+        driving().setPosition({
+          ...cursor, accuracy: 5, speed: 14,
+          heading: bearingDeg(cursor, target), ts: tick,
+        } as Position)
       }, STEP_MS)
     }
 
