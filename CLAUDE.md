@@ -66,6 +66,25 @@ The Android client's `Api.kt` is the reference contract. Key endpoints:
 
 A road point's `type` field drives which game card renders. The payload carries `answers[]`, `right_answer`, `geo_right_answer` + `geo_center_radius` (geo-guess), `buckets` (quantitative scoring ranges), `story*`/`question_*` media, and `html_payload`/`url` (webview).
 
+## Testing UI changes (required)
+
+**Always run Playwright to verify UI changes before reporting done.** Never mark a UI fix complete without browser verification.
+
+Use headless Chrome at `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`, scripts in `/tmp/rdio-pw`. Test against `http://localhost:5173` (dev server) or `https://roadio-web-client.vercel.app` (prod). Pin the device id via `localStorage.setItem('roadio.device_id', ...)`.
+
+```bash
+# Quick Playwright check pattern
+node -e "
+const { chromium } = require('/tmp/rdio-pw/node_modules/playwright-core');
+(async () => {
+  const b = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+  const p = await b.newPage();
+  await p.goto('http://localhost:5173/TARGET_ROUTE');
+  // assertions here
+  await b.close();
+})();"
+```
+
 ## Source material (old app, for reference only — do not import)
 
 The original Android/Kotlin source is in sibling folders: `../roadio-mvp`, `../roadio-mvp-copy` (flattened, easiest to read), `../roadio-mvp2`. Use them to recover data contracts, scoring rules, and screen flows. The web client is a fresh rewrite, not a port.
