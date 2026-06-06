@@ -39,3 +39,38 @@
 .tab-icon {
   font-size: 20px;
 }
+
+/* ---------- install banner ---------- */
+.install-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #1b9fe0;
+  color: #fff;
+  padding: 10px 14px;
+  direction: rtl;
+}
+
+.install-banner-txt {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.install-banner-btn {
+  background: #fff;
+  color: #1b9fe0;
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.install-banner-close {
+  background: transparent;
+  color: rgba(255,255,255,0.8);
+  border: 0;
+  font-size: 16px;
+  padding: 4px 6px;
+}

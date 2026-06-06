@@ -298,6 +298,61 @@
   padding: 9px;
 }
 
+/* ---------- destination prompt ---------- */
+.map-dest-chip {
+  position: absolute;
+  z-index: 3;
+  bottom: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.92);
+  color: #007aac;
+  border: 1.5px solid #36c0f6;
+  border-radius: 20px;
+  padding: 6px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  max-width: min(82%, 360px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: rtl;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.map-dest-edit {
+  position: absolute;
+  z-index: 3;
+  bottom: 58px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(82%, 360px);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.map-dest-input {
+  flex: 1;
+  background: #fff;
+  border: 2px solid #36c0f6;
+  border-radius: 12px;
+  padding: 8px 14px;
+  font-size: 15px;
+  direction: rtl;
+  outline: none;
+}
+
+.map-dest-ok {
+  background: #36c0f6;
+  color: #fff;
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
 /* ---------- bottom current-game card (single row) ---------- */
 .map-gamecard {
   position: absolute;

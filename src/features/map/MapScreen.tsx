@@ -14,6 +14,7 @@ import { useProximity } from './useProximity'
 import { useSimDrive, SIM_ROUTES } from './useSimDrive'
 import GameCard from '../games/GameCard'
 import { t } from '../../lib/i18n'
+import { distanceMeters } from '../../lib/geo'
 import { getDeviceId, setDeviceId, DEMO_USER_ID } from '../../lib/deviceId'
 import type { Configuration, MapMarker, MapMarkersResponse } from '../../types'
 import './MapScreen.css'
@@ -124,6 +125,19 @@ export default function MapScreen() {
   // route's area, and walks the car along it so questions pop as you pass pins.
   const [simRoute, setSimRoute] = useState<string | null>(null)
   const sim = simRoute != null
+
+  // Destination prompt — stored in sessionStorage, reset each session.
+  const [destination, setDestination] = useState(() =>
+    sessionStorage.getItem('roadio.destination') ?? '',
+  )
+  const [destEditing, setDestEditing] = useState(false)
+  const [destDraft, setDestDraft] = useState('')
+  function saveDestination(v: string) {
+    const val = v.trim()
+    setDestination(val)
+    sessionStorage.setItem('roadio.destination', val)
+    setDestEditing(false)
+  }
 
   // Map screen drives the whole live loop.
   useGeolocation(!sim)
@@ -349,6 +363,35 @@ export default function MapScreen() {
     }
   }, [position])
 
+  // Auto-zoom so the nearest item stays visible. Uses cameraForBounds to
+  // compute the zoom needed to show both user and nearest pin, then easeTo
+  // just the zoom (no pan — user stays centered). Capped at 5km radius.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !position || !following || !layersReady) return
+    const candidates = [
+      ...markersStore.items,
+      ...markersStore.missions,
+      ...markersStore.openMissions,
+    ]
+    if (!candidates.length) return
+    let nearest: MapMarker | null = null
+    let minDist = Infinity
+    for (const m of candidates) {
+      const d = distanceMeters(position.lat, position.lng, Number(m.lat), Number(m.lng))
+      if (d < minDist) { minDist = d; nearest = m }
+    }
+    if (!nearest || minDist > 5000) return
+    const bounds: [[number, number], [number, number]] = [
+      [position.lng, position.lat],
+      [Number(nearest.lng), Number(nearest.lat)],
+    ]
+    const cam = map.cameraForBounds(bounds, { padding: 80 })
+    if (cam && cam.zoom != null && cam.zoom < 14.5) {
+      map.easeTo({ zoom: cam.zoom - 0.3, duration: 800 })
+    }
+  }, [position, markersStore.items, markersStore.missions, markersStore.openMissions, following, layersReady]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Push marker data into the GL source whenever markers OR the server icon
   // config change (GPU-rendered symbol/circle layers — no DOM markers, so
   // nothing "swims" on zoom). Markers draw immediately with local default art,
@@ -451,6 +494,31 @@ export default function MapScreen() {
             <line x1="2" y1="12" x2="6" y2="12"/>
             <line x1="18" y1="12" x2="22" y2="12"/>
           </svg>
+        </button>
+      )}
+
+      {/* Destination prompt chip */}
+      {destEditing ? (
+        <div className="map-dest-edit">
+          <input
+            className="map-dest-input"
+            autoFocus
+            placeholder={t('destinationLabel', locale)}
+            defaultValue={destination}
+            onChange={(e) => setDestDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveDestination(destDraft || (e.target as HTMLInputElement).value)
+              if (e.key === 'Escape') setDestEditing(false)
+            }}
+          />
+          <button className="map-dest-ok" onClick={() => saveDestination(destDraft)}>✓</button>
+        </div>
+      ) : (
+        <button
+          className="map-dest-chip"
+          onClick={() => { setDestDraft(destination); setDestEditing(true) }}
+        >
+          {destination || t('destinationLabel', locale)}
         </button>
       )}
 
