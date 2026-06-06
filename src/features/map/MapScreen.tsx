@@ -335,6 +335,20 @@ export default function MapScreen() {
     }
   }, [position, following])
 
+  // Rotate map to match driving heading. Only when heading is valid AND moving
+  // (speed > 1 m/s ≈ 3.6 km/h) — keeps map north-up when stationary.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !position) return
+    const { heading, speed } = position
+    if (heading != null && (speed ?? 0) > 1) {
+      map.easeTo({ bearing: heading, duration: 400 })
+    } else if ((speed ?? 0) < 0.5) {
+      // snap back to north when clearly stopped
+      map.easeTo({ bearing: 0, duration: 800 })
+    }
+  }, [position])
+
   // Push marker data into the GL source whenever markers OR the server icon
   // config change (GPU-rendered symbol/circle layers — no DOM markers, so
   // nothing "swims" on zoom). Markers draw immediately with local default art,
@@ -442,7 +456,6 @@ export default function MapScreen() {
 
       {/* Bottom-center current-game card → game selection. */}
       <div className="map-gamecard">
-        <span className="map-gamecard-lbl">{t('currentGame', locale)}</span>
         <span className="map-gamecard-name">{gameName || 'Trivia on your way'}</span>
         <button className="map-gamecard-btn" onClick={() => navigate('/games')}>
           {t('moreGames', locale)} ›

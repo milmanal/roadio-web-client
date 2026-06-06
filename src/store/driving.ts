@@ -9,6 +9,7 @@ export interface Position {
   lng: number
   accuracy?: number
   speed?: number | null
+  heading?: number | null  // degrees from north (0-360), null when stationary
   ts: number
 }
 

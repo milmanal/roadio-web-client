@@ -53,7 +53,11 @@ export function useProximity(active: boolean) {
           lng: pos.lng,
           locale: session().locale,
         })
-        if (res.items?.length) driving().triggerItems(res.items)
+        if (res.items?.length) {
+          driving().triggerItems(res.items)
+          // dynamic import keeps Sounds out of the hot path
+          import('../../lib/sounds').then(({ Sounds }) => Sounds.proximity())
+        }
       } catch {
         // transient — allow a retry on a later pass
         fired.current.delete(itemId)

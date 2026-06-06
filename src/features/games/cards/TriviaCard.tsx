@@ -5,6 +5,7 @@ import { reportEvents, NEXT_EVENT } from '../../../api/endpoints'
 import { isCorrect, isScored, normalize } from '../answer'
 import { MediaBlock } from '../MediaBlock'
 import { t } from '../../../lib/i18n'
+import { Sounds } from '../../../lib/sounds'
 import type { RoadPoint } from '../../../types'
 
 const CORRECT_FRAMES = [
@@ -55,6 +56,9 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
   const isIntro = choices.length === 1
   const isQuiz = point.quiz_name != null || point.is_quiz === true
   const isLastQuizCard = isQuiz && queueLen === 0
+
+  // Play new-question sound when card first appears.
+  useEffect(() => { Sounds.newQuestion() }, [])
 
   const [phase, setPhase] = useState<Phase>(revealOnly ? 'revealed' : 'asking')
   const [eliminated, setEliminated] = useState<string[]>([])
@@ -140,16 +144,17 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
       return
     }
     if (right) {
+      Sounds.correct()
       setResult(point.id, true)
       setReaction('correct')
       setFrame(0)
       setPhase('reacting')
     } else {
+      Sounds.wrong()
       const nextAttempts = attempts + 1
       setAttempts(nextAttempts)
       setEliminated((e) => [...e, choice])
       setReaction('wrong')
-      // Only the final wrong attempt counts as the item's result.
       if (nextAttempts < maxAttempts) retryRef.current = true
       else setResult(point.id, false)
       setPhase('reacting')
@@ -163,6 +168,7 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
   }
 
   function onContinue() {
+    Sounds.next()
     report({ answer: NEXT_EVENT })
     advance()
   }
@@ -269,21 +275,23 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
               {point.story && <p className="reveal-story">{point.story}</p>}
               <MediaBlock images={point.story_images} voice={point.story_voices?.[0]} />
               <div className="vote-row">
-                <button
-                  className={`vote vote-down ${voted === 'down' ? 'vote-on' : ''}`}
-                  onClick={() => onVote('down')}
-                  aria-label="thumbs down"
-                >
-                  👎
-                </button>
                 <span className="vote-q">{t('voteQuestion', locale)}</span>
-                <button
-                  className={`vote vote-up ${voted === 'up' ? 'vote-on' : ''}`}
-                  onClick={() => onVote('up')}
-                  aria-label="thumbs up"
-                >
-                  👍
-                </button>
+                <div className="vote-btns">
+                  <button
+                    className={`vote vote-up ${voted === 'up' ? 'vote-on' : ''}`}
+                    onClick={() => onVote('up')}
+                    aria-label="thumbs up"
+                  >
+                    👍
+                  </button>
+                  <button
+                    className={`vote vote-down ${voted === 'down' ? 'vote-on' : ''}`}
+                    onClick={() => onVote('down')}
+                    aria-label="thumbs down"
+                  >
+                    👎
+                  </button>
+                </div>
               </div>
               <button className="next-btn" onClick={onContinue}>
                 {isLastQuizCard ? t('finishQuiz', locale) : t('nextCard', locale)}

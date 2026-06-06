@@ -31,6 +31,7 @@ export function useGeolocation(active: boolean) {
           lng: pos.coords.longitude,
           accuracy: pos.coords.accuracy,
           speed: pos.coords.speed,
+          heading: pos.coords.heading,
           ts: pos.timestamp,
         })
       },

@@ -298,7 +298,7 @@
   padding: 9px;
 }
 
-/* ---------- bottom current-game card ---------- */
+/* ---------- bottom current-game card (single row) ---------- */
 .map-gamecard {
   position: absolute;
   z-index: 3;
@@ -308,33 +308,30 @@
   width: min(86%, 400px);
   background: #fff;
   border-radius: 14px;
-  padding: 10px 12px 12px;
-  text-align: center;
+  padding: 8px 10px 8px 14px;
   box-shadow: 0 3px 14px rgba(0, 0, 0, 0.2);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 4px;
-}
-.map-gamecard-lbl {
-  font-size: 12px;
-  color: #8a90a3;
+  justify-content: space-between;
+  gap: 10px;
 }
 .map-gamecard-name {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 800;
   color: #007aac;
+  flex: 1;
+  direction: rtl;
 }
 .map-gamecard-btn {
-  margin-top: 6px;
-  width: 100%;
+  flex-shrink: 0;
   background: #36c0f6;
   color: #fff;
   border: 0;
   border-radius: 10px;
-  padding: 9px;
+  padding: 7px 12px;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .map-dev-row {
