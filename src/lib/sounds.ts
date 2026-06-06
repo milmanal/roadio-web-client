@@ -20,9 +20,8 @@ function play(src: string, volume = 1) {
 }
 
 export const Sounds = {
-  newQuestion: () => play('/sounds/new_question.wav', 0.7),
-  correct:     () => play('/sounds/correct.wav'),
-  wrong:       () => play('/sounds/wrong.wav'),
-  next:        () => play('/sounds/next.wav', 0.8),
-  proximity:   () => play('/sounds/proximity.wav', 0.6),
+  correct:    () => play('/sounds/correct.wav'),
+  wrong:      () => play('/sounds/wrong.wav'),      // wrong_2_5 from Android
+  next:       () => play('/sounds/next.wav', 0.8),
+  gameStart:  () => play('/sounds/game_start.wav', 0.7), // honk_honk_low_2
 }

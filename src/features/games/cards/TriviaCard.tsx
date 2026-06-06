@@ -57,9 +57,6 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
   const isQuiz = point.quiz_name != null || point.is_quiz === true
   const isLastQuizCard = isQuiz && queueLen === 0
 
-  // Play new-question sound when card first appears.
-  useEffect(() => { Sounds.newQuestion() }, [])
-
   const [phase, setPhase] = useState<Phase>(revealOnly ? 'revealed' : 'asking')
   const [eliminated, setEliminated] = useState<string[]>([])
   const [attempts, setAttempts] = useState(0)
@@ -202,14 +199,8 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
           {phase !== 'summary' && (
             <>
               {point.question && <h2 className="trivia-q">{point.question}</h2>}
-              {/* On reveal, if the story has its own image, drop the question
-                  image so the post-answer screen isn't double-imaged. */}
               <MediaBlock
-                images={
-                  phase === 'revealed' && (point.story_images ?? []).some(Boolean)
-                    ? null
-                    : point.question_images
-                }
+                images={point.question_images}
                 voice={point.question_voice}
               />
             </>
@@ -274,28 +265,31 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
               )}
               {point.story && <p className="reveal-story">{point.story}</p>}
               <MediaBlock images={point.story_images} voice={point.story_voices?.[0]} />
-              <div className="vote-row">
-                <span className="vote-q">{t('voteQuestion', locale)}</span>
-                <div className="vote-btns">
-                  <button
-                    className={`vote vote-up ${voted === 'up' ? 'vote-on' : ''}`}
-                    onClick={() => onVote('up')}
-                    aria-label="thumbs up"
-                  >
-                    👍
-                  </button>
-                  <button
-                    className={`vote vote-down ${voted === 'down' ? 'vote-on' : ''}`}
-                    onClick={() => onVote('down')}
-                    aria-label="thumbs down"
-                  >
-                    👎
-                  </button>
+              {/* Single row: [הבא] right · [?אהבנו 👍 👎] left */}
+              <div className="reveal-actions">
+                <button className="next-btn" onClick={onContinue}>
+                  {isLastQuizCard ? t('finishQuiz', locale) : t('nextCard', locale)}
+                </button>
+                <div className="vote-group">
+                  <span className="vote-q">{t('voteQuestion', locale)}</span>
+                  <div className="vote-btns">
+                    <button
+                      className={`vote vote-up ${voted === 'up' ? 'vote-on' : ''}`}
+                      onClick={() => onVote('up')}
+                      aria-label="thumbs up"
+                    >
+                      👍
+                    </button>
+                    <button
+                      className={`vote vote-down ${voted === 'down' ? 'vote-on' : ''}`}
+                      onClick={() => onVote('down')}
+                      aria-label="thumbs down"
+                    >
+                      👎
+                    </button>
+                  </div>
                 </div>
               </div>
-              <button className="next-btn" onClick={onContinue}>
-                {isLastQuizCard ? t('finishQuiz', locale) : t('nextCard', locale)}
-              </button>
             </div>
           )}
 

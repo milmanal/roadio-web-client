@@ -10,6 +10,7 @@
 import { fetchItems, leaveGame } from '../../api/endpoints'
 import { useSession } from '../../store/session'
 import { useDriving } from '../../store/driving'
+import { Sounds } from '../../lib/sounds'
 
 /** Select (activate) a game by its quiz token. Returns has_game_selected. */
 export async function selectGame(quiz: string): Promise<boolean> {
@@ -34,6 +35,7 @@ export async function selectGame(quiz: string): Promise<boolean> {
     lng: pos ? String(pos.lng) : null,
   })
 
+  Sounds.gameStart()
   if (res.configuration) driving.setConfig(res.configuration)
   session.setHud({
     score: String(res.points ?? res.score ?? '0'),

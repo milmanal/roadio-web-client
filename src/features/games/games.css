@@ -339,23 +339,32 @@
   direction: ltr;
 }
 
-.vote-row {
+/* Single-row: next-btn (right in RTL) + vote group (left in RTL) */
+.reveal-actions {
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: space-between;
+  direction: rtl;
   gap: 10px;
   margin-top: 4px;
 }
 
+.vote-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .vote-q {
-  font-weight: 800;
-  font-size: 17px;
+  font-weight: 700;
+  font-size: 15px;
   direction: rtl;
 }
 
 .vote-btns {
   display: flex;
-  gap: 4px;
+  gap: 2px;
 }
 
 .vote {
@@ -374,7 +383,6 @@
 }
 
 .next-btn {
-  align-self: center;
   background: #fff;
   color: #1b9fe0;
   border: 0;
