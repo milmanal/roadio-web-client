@@ -4,6 +4,7 @@ import { getMoods, getTowns, registerUser } from '../api/endpoints'
 import { useSession } from '../store/session'
 import { useDriving } from '../store/driving'
 import { t } from '../lib/i18n'
+import TownAutocomplete from '../components/TownAutocomplete'
 import type { Mood, Town } from '../types'
 import './RegistrationPage.css'
 
@@ -96,18 +97,13 @@ export default function RegistrationPage() {
           </button>
         </div>
 
-        <select
-          className="reg-input reg-select"
+        <TownAutocomplete
+          towns={towns}
           value={townId}
-          onChange={(e) => setTownId(e.target.value)}
-        >
-          <option value="">{t('townLabel', locale)}</option>
-          {towns.map((tn) => (
-            <option key={tn.id} value={String(tn.id)}>
-              {tn.name}
-            </option>
-          ))}
-        </select>
+          onChange={setTownId}
+          placeholder={t('townLabel', locale)}
+          inputClassName="reg-input"
+        />
 
         <div className="reg-field-lbl">{t('moodLabel', locale)}</div>
         <div className="reg-moods">

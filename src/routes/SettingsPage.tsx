@@ -36,6 +36,11 @@ export default function SettingsPage() {
             {userLabel && <div className="set-sub">{userLabel}</div>}
           </div>
         </div>
+        {username && (
+          <button className="set-reset" onClick={() => setDeviceId(null)}>
+            {t('signOut', locale)}
+          </button>
+        )}
       </section>
 
       {/* Language */}

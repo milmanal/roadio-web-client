@@ -402,7 +402,7 @@ export default function MapScreen() {
           <div className="map-user-txt">
             <span className="map-user-name">{username || 'guest'}</span>
             <span className="map-user-sub">
-              {userLabel || t('registerHere', locale)}
+              {userLabel || (!username ? t('registerHere', locale) : '')}
             </span>
           </div>
           <span className="map-user-avatar">
@@ -410,9 +410,6 @@ export default function MapScreen() {
           </span>
         </button>
       </div>
-
-      {/* Top-left ROADIO logo badge. */}
-      <img className="map-logo" src="/roadio-logo.png" alt="Roadio" />
 
       {/* Floating next-item distance pill. */}
       <div className="map-nearby">
@@ -433,7 +430,13 @@ export default function MapScreen() {
               mapRef.current.easeTo({ center: [p.lng, p.lat], zoom: 15 })
           }}
         >
-          ◎
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <line x1="12" y1="2" x2="12" y2="6"/>
+            <line x1="12" y1="18" x2="12" y2="22"/>
+            <line x1="2" y1="12" x2="6" y2="12"/>
+            <line x1="18" y1="12" x2="22" y2="12"/>
+          </svg>
         </button>
       )}
 
