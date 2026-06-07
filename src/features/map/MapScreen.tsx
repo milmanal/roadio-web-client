@@ -191,7 +191,6 @@ export default function MapScreen() {
     (props: Record<string, unknown>, ll: [number, number]) => {
       const map = mapRef.current
       if (!map) return
-      const locale = useSession.getState().locale
       const link = String(props.link ?? '')
       const itemId = props.item_id
       const typeLabel = String(props.title ?? props.item_type ?? '')
@@ -207,7 +206,6 @@ export default function MapScreen() {
           ${typeLabel ? `<div class="ib-type">${typeLabel}</div>` : ''}
           ${teaser ? `<div class="ib-teaser">${teaser}</div>` : ''}
           ${link ? `<a class="ib-link" href="${link}" target="_blank" rel="noreferrer">Waze ›</a>` : ''}
-          ${itemId ? `<button class="ib-play">${t('start', locale)}</button>` : ''}
         </div>`
       }
 
@@ -224,16 +222,6 @@ export default function MapScreen() {
         .setHTML(html)
         .addTo(map)
       popupRef.current = popup
-
-      function wirePlay() {
-        const btn = popup.getElement()?.querySelector('.ib-play') as HTMLButtonElement | null
-        btn?.addEventListener('click', () => {
-          const item = useDriving.getState().items.find((it) => String(it.id) === String(itemId))
-          if (item) useDriving.getState().triggerItems([item])
-          popup.remove()
-        })
-      }
-      wirePlay()
 
     },
     [],
@@ -351,6 +339,7 @@ export default function MapScreen() {
     ro.observe(containerRef.current)
     resizeObs.current = ro
     mapRef.current = map
+    if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__map = map
     return () => {
       if (recenterTimer.current) window.clearTimeout(recenterTimer.current)
       resizeObs.current?.disconnect()
