@@ -192,12 +192,15 @@ export default function MapScreen() {
       const map = mapRef.current
       if (!map) return
       const locale = useSession.getState().locale
-      const session = useSession.getState()
       const link = String(props.link ?? '')
       const itemId = props.item_id
       const typeLabel = String(props.title ?? props.item_type ?? '')
 
-      function trim(s: string) { return s.length > 80 ? s.slice(0, 78) + '…' : s }
+      // content arrives as HTML from the server — strip tags to get plain text.
+      function stripHtml(s: string) {
+        return s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim()
+      }
+      function trim(s: string) { return s.length > 72 ? s.slice(0, 70) + '…' : s }
 
       function makeHtml(teaser: string) {
         return `<div class="ib">
@@ -208,11 +211,12 @@ export default function MapScreen() {
         </div>`
       }
 
-      // Try driving store first (already fetched); fall back to marker content.
+      // Road point in driving store → question text; else strip HTML from marker content.
       const cached = itemId
         ? useDriving.getState().items.find((it) => String(it.id) === String(itemId))
         : null
-      const initialTeaser = trim(cached?.question ?? String(props.content ?? ''))
+      const rawContent = stripHtml(String(props.content ?? ''))
+      const initialTeaser = trim(cached?.question ?? rawContent)
       const html = makeHtml(initialTeaser)
       popupRef.current?.remove()
       const popup = new mapboxgl.Popup({ offset: 24, closeButton: true })
@@ -231,18 +235,6 @@ export default function MapScreen() {
       }
       wirePlay()
 
-      // If teaser is empty, async-fetch items near this marker to get question text.
-      if (!initialTeaser && itemId) {
-        import('../../api/endpoints').then(({ fetchItems }) =>
-          fetchItems({ user_id: session.userId, lat: ll[1], lng: ll[0] })
-        ).then((res) => {
-          if (!popup.isOpen()) return
-          const fetched = res.items?.find((it) => String(it.id) === String(itemId))
-          if (!fetched?.question) return
-          popup.setHTML(makeHtml(trim(fetched.question)))
-          wirePlay()
-        }).catch(() => {})
-      }
     },
     [],
   )

@@ -124,10 +124,13 @@
 
 /* ---------- infobox popup ---------- */
 .ib {
-  min-width: 160px;
-  max-width: 220px;
+  min-width: 180px;
+  max-width: 240px;
   text-align: start;
   direction: rtl;
+  /* push type label below Mapbox's absolute-positioned × close button */
+  padding-top: 6px;
+  padding-inline-end: 18px;
 }
 .ib-type {
   font-size: 12px;
@@ -135,7 +138,7 @@
   color: #007aac;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 }
 .ib-teaser {
   color: #333;
