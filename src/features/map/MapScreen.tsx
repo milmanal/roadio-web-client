@@ -344,6 +344,12 @@ export default function MapScreen() {
       if (recenterTimer.current) window.clearTimeout(recenterTimer.current)
       resizeObs.current?.disconnect()
       resizeObs.current = null
+      // Remove the car marker before the map is destroyed so the ref is
+      // nulled out — otherwise the stale Marker object (detached from the old
+      // map) prevents the position effect from re-adding it to the new map.
+      userCarRef.current?.remove()
+      userCarRef.current = null
+      didCenter.current = false
       map.remove()
       mapRef.current = null
     }
