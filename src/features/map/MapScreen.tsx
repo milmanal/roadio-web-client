@@ -192,42 +192,57 @@ export default function MapScreen() {
       const map = mapRef.current
       if (!map) return
       const locale = useSession.getState().locale
+      const session = useSession.getState()
       const link = String(props.link ?? '')
       const itemId = props.item_id
-
-      // Prefer question text from loaded road points; fall back to marker content.
-      const roadPoint = itemId
-        ? useDriving.getState().items.find((it) => String(it.id) === String(itemId))
-        : null
-      const rawTeaser = roadPoint?.question ?? String(props.content ?? '') ?? String(props.title ?? '')
-      const teaser = rawTeaser.length > 80 ? rawTeaser.slice(0, 78) + '…' : rawTeaser
-
-      // Type label: use title (marker label from backend) or item type
       const typeLabel = String(props.title ?? props.item_type ?? '')
 
-      const html = `
-      <div class="ib">
-        ${typeLabel ? `<div class="ib-type">${typeLabel}</div>` : ''}
-        ${teaser ? `<div class="ib-teaser">${teaser}</div>` : ''}
-        ${link ? `<a class="ib-link" href="${link}" target="_blank" rel="noreferrer">Waze ›</a>` : ''}
-        ${itemId ? `<button class="ib-play">${t('start', locale)}</button>` : ''}
-      </div>`
+      function trim(s: string) { return s.length > 80 ? s.slice(0, 78) + '…' : s }
+
+      function makeHtml(teaser: string) {
+        return `<div class="ib">
+          ${typeLabel ? `<div class="ib-type">${typeLabel}</div>` : ''}
+          ${teaser ? `<div class="ib-teaser">${teaser}</div>` : ''}
+          ${link ? `<a class="ib-link" href="${link}" target="_blank" rel="noreferrer">Waze ›</a>` : ''}
+          ${itemId ? `<button class="ib-play">${t('start', locale)}</button>` : ''}
+        </div>`
+      }
+
+      // Try driving store first (already fetched); fall back to marker content.
+      const cached = itemId
+        ? useDriving.getState().items.find((it) => String(it.id) === String(itemId))
+        : null
+      const initialTeaser = trim(cached?.question ?? String(props.content ?? ''))
+      const html = makeHtml(initialTeaser)
       popupRef.current?.remove()
       const popup = new mapboxgl.Popup({ offset: 24, closeButton: true })
         .setLngLat(ll)
         .setHTML(html)
         .addTo(map)
       popupRef.current = popup
-      const btn = popup
-        .getElement()
-        ?.querySelector('.ib-play') as HTMLButtonElement | null
-      btn?.addEventListener('click', () => {
-        const item = useDriving
-          .getState()
-          .items.find((it) => String(it.id) === String(itemId))
-        if (item) useDriving.getState().triggerItems([item])
-        popup.remove()
-      })
+
+      function wirePlay() {
+        const btn = popup.getElement()?.querySelector('.ib-play') as HTMLButtonElement | null
+        btn?.addEventListener('click', () => {
+          const item = useDriving.getState().items.find((it) => String(it.id) === String(itemId))
+          if (item) useDriving.getState().triggerItems([item])
+          popup.remove()
+        })
+      }
+      wirePlay()
+
+      // If teaser is empty, async-fetch items near this marker to get question text.
+      if (!initialTeaser && itemId) {
+        import('../../api/endpoints').then(({ fetchItems }) =>
+          fetchItems({ user_id: session.userId, lat: ll[1], lng: ll[0] })
+        ).then((res) => {
+          if (!popup.isOpen()) return
+          const fetched = res.items?.find((it) => String(it.id) === String(itemId))
+          if (!fetched?.question) return
+          popup.setHTML(makeHtml(trim(fetched.question)))
+          wirePlay()
+        }).catch(() => {})
+      }
     },
     [],
   )
@@ -380,12 +395,6 @@ export default function MapScreen() {
       userCarRef.current.setLngLat(ll)
     }
 
-    // Rotate inner wrapper via CSS (transition there = smooth rotation).
-    const inner = userCarRef.current.getElement().querySelector<HTMLElement>('.mk-user-inner')
-    if (inner) {
-      inner.style.transform = heading != null && moving ? `rotate(${heading}deg)` : 'rotate(0deg)'
-    }
-
     if (!didCenter.current) {
       map.jumpTo({ center: ll, zoom: 15, bearing: 0 })
       didCenter.current = true
@@ -393,10 +402,10 @@ export default function MapScreen() {
     }
 
     // Single easeTo: center + bearing in one call.
+    // The MAP rotates to heading — the car icon must NOT also rotate or it
+    // double-rotates and leans. Icon always points "up" on screen.
     const opts: Parameters<mapboxgl.Map['easeTo']>[0] = { duration: 500 }
     if (following) opts.center = ll
-    // Map stays north-up; car icon rotation handles heading feedback.
-    // Only rotate map when heading changes significantly (avoid jitter).
     if (heading != null && moving) opts.bearing = heading
     else if (stopped) opts.bearing = 0
 
