@@ -95,6 +95,8 @@ function buildMarkerFC(
           title: m.title ?? '',
           body: label && typeof label === 'object' ? (label.title ?? '') : '',
           link: label && typeof label === 'object' ? (label.link ?? '') : '',
+          content: typeof m.content === 'string' ? m.content : '',
+          item_type: m.type ?? '',
         },
       })
     }
@@ -190,14 +192,23 @@ export default function MapScreen() {
       const map = mapRef.current
       if (!map) return
       const locale = useSession.getState().locale
-      const title = String(props.title ?? '')
-      const body = String(props.body ?? '')
       const link = String(props.link ?? '')
       const itemId = props.item_id
+
+      // Prefer question text from loaded road points; fall back to marker content.
+      const roadPoint = itemId
+        ? useDriving.getState().items.find((it) => String(it.id) === String(itemId))
+        : null
+      const rawTeaser = roadPoint?.question ?? String(props.content ?? '') ?? String(props.title ?? '')
+      const teaser = rawTeaser.length > 80 ? rawTeaser.slice(0, 78) + '…' : rawTeaser
+
+      // Type label: use title (marker label from backend) or item type
+      const typeLabel = String(props.title ?? props.item_type ?? '')
+
       const html = `
       <div class="ib">
-        ${title ? `<div class="ib-title">${title}</div>` : ''}
-        ${body ? `<div class="ib-body">${body}</div>` : ''}
+        ${typeLabel ? `<div class="ib-type">${typeLabel}</div>` : ''}
+        ${teaser ? `<div class="ib-teaser">${teaser}</div>` : ''}
         ${link ? `<a class="ib-link" href="${link}" target="_blank" rel="noreferrer">Waze ›</a>` : ''}
         ${itemId ? `<button class="ib-play">${t('start', locale)}</button>` : ''}
       </div>`
