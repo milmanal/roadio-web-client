@@ -527,8 +527,8 @@ export default function MapScreen() {
         </button>
       )}
 
-      {/* Destination prompt chip */}
-      {destEditing ? (
+      {/* Bottom bar: [game ›] on left · [destination] on right — single row */}
+      {destEditing && (
         <div className="map-dest-edit">
           {destSuggestions.length > 0 && (
             <div className="map-dest-suggestions">
@@ -557,20 +557,16 @@ export default function MapScreen() {
             <button className="map-dest-ok" onClick={() => saveDestination(destDraft)}>✓</button>
           </div>
         </div>
-      ) : (
+      )}
+      <div className="map-bottom-bar">
         <button
-          className="map-dest-chip"
+          className="map-bottom-dest"
           onClick={() => { setDestDraft(destination); setDestEditing(true) }}
         >
           {destination || t('destinationLabel', locale)}
         </button>
-      )}
-
-      {/* Bottom-center current-game card → game selection. */}
-      <div className="map-gamecard">
-        <span className="map-gamecard-name">{gameName || 'Trivia on your way'}</span>
-        <button className="map-gamecard-btn" onClick={() => navigate('/games')}>
-          {t('moreGames', locale)} ›
+        <button className="map-bottom-game" onClick={() => navigate('/games')}>
+          {gameName || 'Trivia'} ›
         </button>
       </div>
 
