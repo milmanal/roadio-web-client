@@ -7,29 +7,40 @@ import type { RoadPoint } from '../../../types'
 
 // Renders a quest/Babylon item using the backend's own item HTML — the complete
 // original experience (narrator + professor avatar + audio, pattern-lock grid,
-// speech recorder, destination setup, etc.). We do NOT rebuild these in React.
+// speech recorder, destination setup). We do NOT rebuild these in React.
 //
-// Poll-delivered quest items embed their full HTML in `html_payload`, but their
-// `id` is synthetic/ephemeral (changes every fetch) so GET /item/<id> 404s to
-// empty → blank. So we render the embedded payload via srcdoc instead, and:
-//  - rewrite domain_url to "#", so the item signals events by HASH navigation
-//    (window.location.href = "#/answer?...") rather than leaving the page;
-//  - rewrite the dead app.premium.roadio.io / www.roadio.io hosts to /api so
-//    its AJAX + redirects (make_a_call, destination setup) hit revive via proxy.
-// srcdoc iframes inherit our origin, so we can read hashchange and bridge to
-// /v2/events — mirroring the old Android WebView (GameWebViewEvent).
-// Fallback: items without html_payload but with a real DB id load /item/<id>.
+// IMPORTANT: we load via a real same-origin URL (src), never srcdoc. The item
+// signals events by HASH navigation (window.location.href = "#/answer?..."),
+// and a srcdoc document's base is the PARENT url — so "#/x" would resolve to
+// /drive#/x and recursively load the whole app into the iframe. With a real
+// /api/... src, "#/x" stays a same-document hash change we can read and bridge
+// to /v2/events (mirroring the old Android WebView's GameWebViewEvent). The
+// backend serves these with domain_url="#" for client=web.
+//
+// Two shapes arrive:
+//  - content items (narrator/pattern_lock/recorder): real DB id → /api/item/<id>
+//  - redirect wrappers (e.g. quest destination setup): a synthetic, per-fetch id
+//    (so /item/<id> 404s to empty) whose tiny html_payload only redirects to
+//    e.g. /personal_page. We follow that redirect URL directly as the src.
 
 interface Props {
   point: RoadPoint
 }
 
-// Make an embedded item payload talk to us (hash events) and to revive (/api).
-function bridgePayload(html: string): string {
-  return html
-    .replace(/domain_url\s*=\s*["'][^"']*["']/g, 'domain_url = "#"')
+// Rewrite the dead native hosts to the /api proxy (revive).
+function toProxy(url: string): string {
+  return url
     .replace(/https?:\/\/app\.premium\.roadio\.io/g, '/api')
     .replace(/https?:\/\/www\.roadio\.io/g, '/api')
+}
+
+// A tiny payload whose sole purpose is to redirect → return its (proxied)
+// target so we can load it directly. Content items (large, with location.href
+// only inside functions) return null.
+function redirectTarget(html: string | null | undefined): string | null {
+  if (!html || html.length > 2000) return null
+  const m = html.match(/location\.href\s*=\s*["']([^"']+)["']/)
+  return m ? toProxy(m[1]) : null
 }
 
 export default function QuestItemFrame({ point }: Props) {
@@ -40,12 +51,10 @@ export default function QuestItemFrame({ point }: Props) {
   const dismissActive = useDriving((s) => s.dismissActive)
   const setResult = useDriving((s) => s.setResult)
 
-  const payload = point.html_payload
-  const srcDoc = payload ? bridgePayload(payload) : undefined
-  // Fallback only when there's no embedded payload (real DB id items).
-  const src = payload
-    ? undefined
-    : `/api/item/${point.id}?version=${APP_VERSION}&user_id=${encodeURIComponent(userId)}&client=web`
+  const redir = redirectTarget(point.html_payload)
+  const src =
+    redir ??
+    `/api/item/${point.id}?version=${APP_VERSION}&user_id=${encodeURIComponent(userId)}&client=web`
 
   useEffect(() => {
     const iframe = iframeRef.current
@@ -96,20 +105,16 @@ export default function QuestItemFrame({ point }: Props) {
       } else if (evType === 'next') {
         void advance()
       }
-      // 'footer' (hide/show) and 'update_config' are no-ops until the quest
-      // map chrome consumes them.
+      // 'footer' (hide/show) and 'update_config' are no-ops here.
     }
 
-    // The item navigates its OWN window hash. srcdoc/same-origin via the proxy,
-    // so we can read the iframe's contentWindow once it loads. Guarded: a stray
-    // cross-origin navigation must never throw into React.
     function attachHashListener() {
       const win = iframe?.contentWindow
       if (!win) return undefined
       const onHash = () => {
         let raw = ''
         try {
-          raw = win.location.hash
+          raw = win.location.hash // e.g. "#/answer?answer=next_event&..."
         } catch {
           return // cross-origin — ignore
         }
@@ -126,7 +131,7 @@ export default function QuestItemFrame({ point }: Props) {
         try {
           win.removeEventListener('hashchange', onHash)
         } catch {
-          // window navigated cross-origin — listener is already gone with it.
+          // window navigated away — listener is gone with it.
         }
       }
     }
@@ -140,7 +145,7 @@ export default function QuestItemFrame({ point }: Props) {
     try {
       if (iframe.contentWindow?.document?.readyState === 'complete') onLoad()
     } catch {
-      // cross-origin readyState access — wait for the load event instead.
+      // cross-origin readyState — wait for the load event.
     }
 
     return () => {
@@ -154,7 +159,6 @@ export default function QuestItemFrame({ point }: Props) {
       <iframe
         ref={iframeRef}
         src={src}
-        srcDoc={srcDoc}
         title={point.question ?? 'quest item'}
         className="quest-frame-iframe"
       />
