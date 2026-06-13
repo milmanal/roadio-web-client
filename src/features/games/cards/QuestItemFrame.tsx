@@ -122,7 +122,13 @@ export default function QuestItemFrame({ point }: Props) {
         void handleEvent(evType, new URLSearchParams(qs))
       }
       win.addEventListener('hashchange', onHash)
-      return () => win.removeEventListener('hashchange', onHash)
+      return () => {
+        try {
+          win.removeEventListener('hashchange', onHash)
+        } catch {
+          // window navigated cross-origin — listener is already gone with it.
+        }
+      }
     }
 
     let detach: (() => void) | undefined
