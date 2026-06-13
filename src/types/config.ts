@@ -12,6 +12,19 @@ export interface MarkerStyle {
   display_points?: boolean | null
 }
 
+/** One stop on the quest "metro line" (the left-edge station strip). */
+export interface QuestStation {
+  icon_url?: string | null
+  station_name?: string | null
+  station_name_disp?: string | null
+  station_order: number
+  station_marker_id?: number | string
+}
+
+export interface QuestMetro {
+  stations?: QuestStation[] | null
+}
+
 export interface Quest {
   next_km_label?: string | null
   next_station_name?: string | null
@@ -21,6 +34,7 @@ export interface Quest {
   avatar?: string | null
   task_opener?: string | null
   random_sounds?: string[] | null
+  metro?: QuestMetro | null
 }
 
 export interface Billing {

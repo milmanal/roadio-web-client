@@ -1,0 +1,102 @@
+/* Quest (Babylon) map chrome. Sits above the Mapbox canvas (z-index 4-ish) but
+   below game cards (z-index 1000). RTL layout. */
+
+.quest-avatar {
+  position: absolute;
+  top: calc(10px + env(safe-area-inset-top));
+  left: 12px;
+  z-index: 5;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #fff;
+  background: #cee5ee;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.quest-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Top-centre distance card. */
+.quest-distance {
+  position: absolute;
+  top: calc(10px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  min-width: 180px;
+  padding: 8px 18px 12px;
+  background: #fff;
+  border-radius: 0 0 16px 16px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  font-family: Heebo, Arial, sans-serif;
+}
+
+.quest-distance-name {
+  background: #2bb6e8;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  margin: -8px -18px 8px;
+  padding: 4px 0;
+  border-radius: 0 0 4px 4px;
+}
+
+.quest-distance-km {
+  font-size: 24px;
+  font-weight: 900;
+  color: #0a6db0;
+  line-height: 1.1;
+}
+
+.quest-distance-station {
+  font-size: 15px;
+  font-weight: 700;
+  color: #4d4d4d;
+}
+
+/* Left-edge metro strip. */
+.quest-stations {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  transform: translateY(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.quest-station {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.55;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.quest-station img {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+}
+
+.quest-station.is-done {
+  opacity: 0.85;
+}
+
+.quest-station.is-active {
+  opacity: 1;
+  transform: scale(1.15);
+  border: 2px solid #2bb6e8;
+}
