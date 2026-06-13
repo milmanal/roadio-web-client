@@ -13,15 +13,15 @@ import './RegistrationPage.css'
 const BABEL_GAME_ID = 496
 const BABEL_QUIZ = 'reg_496_dana'
 
-// "מכונת בבל" — a premium road-quest. Activated via registration (NOT the old
-// lead/download form, which served the dead native app): trigger the babel reg
-// flow (quiz reg_496_dana), then POST /v2/register with game_id 496 +
-// nickname/phone/destination. The quest then streams road points as you drive.
 export default function BabylonPage() {
   const navigate = useNavigate()
   const { userId, locale, setHud } = useSession()
   const setConfig = useDriving((s) => s.setConfig)
 
+  // 'selection' = show iframe; 'register' = show Babylon reg form
+  const [view, setView] = useState<'selection' | 'register'>('selection')
+
+  // registration form state
   const [nickname, setNickname] = useState('')
   const [phone, setPhone] = useState('')
   const [destination, setDestination] = useState('')
@@ -35,10 +35,36 @@ export default function BabylonPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(false)
 
+  // Load towns/moods in background so they're ready when user reaches reg form
   useEffect(() => {
     getTowns().then(setTowns).catch(() => {})
     getMoods().then(setMoods).catch(() => {})
   }, [])
+
+  // Listen for game selection from the iframe
+  useEffect(() => {
+    const handler = async (e: MessageEvent) => {
+      if (!e.data || e.data.type !== 'roadio:select') return
+      const quiz: string = e.data.quiz
+      if (!quiz || busy) return
+
+      if (quiz === BABEL_QUIZ) {
+        // Babylon requires registration before driving
+        setView('register')
+      } else {
+        // Other games (trivia, britania, etc.) — select and drive
+        setBusy(true)
+        try {
+          await selectGame(quiz)
+          navigate('/drive')
+        } finally {
+          setBusy(false)
+        }
+      }
+    }
+    window.addEventListener('message', handler)
+    return () => window.removeEventListener('message', handler)
+  }, [busy, navigate])
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -46,7 +72,6 @@ export default function BabylonPage() {
     setBusy(true)
     setError(false)
     try {
-      // 1) trigger the babel registration flow, 2) register with game_id 496.
       await selectGame(BABEL_QUIZ)
       const cfg = await registerUser({
         userId,
@@ -67,7 +92,6 @@ export default function BabylonPage() {
         avatar: cfg.profile_image ?? null,
         gameName: cfg.game_name ?? null,
       })
-      // Babel is a driving quest — head to the map; road points unlock en route.
       navigate('/drive')
     } catch {
       setError(true)
@@ -76,6 +100,29 @@ export default function BabylonPage() {
     }
   }
 
+  if (view === 'selection') {
+    const src = `/api/game_selection_2?user_id=${encodeURIComponent(userId)}`
+    return (
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
+        {busy && (
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 10,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.4)', color: '#fff', fontSize: 18,
+          }}>
+            טוען...
+          </div>
+        )}
+        <iframe
+          src={src}
+          style={{ flex: 1, border: 'none', width: '100%' }}
+          title="בחירת משחק"
+        />
+      </div>
+    )
+  }
+
+  // Registration form (Babylon only)
   return (
     <div className="page page-body reg-page">
       <h1 className="reg-title">{t('babylonTitle', locale)}</h1>
@@ -98,8 +145,6 @@ export default function BabylonPage() {
           onChange={(e) => setPhone(e.target.value)}
           autoComplete="tel"
         />
-        {/* destination = "לאן נוסעים?" — originally a Places autocomplete; a
-            native picker (Mapbox geocoding) is a follow-up. Free text for now. */}
         <input
           className="reg-input"
           placeholder={t('destinationLabel', locale)}
@@ -116,18 +161,10 @@ export default function BabylonPage() {
 
         <div className="reg-field-lbl">{t('joinContest', locale)}</div>
         <div className="reg-toggle">
-          <button
-            type="button"
-            className={`reg-toggle-btn ${contest ? 'reg-toggle-on' : ''}`}
-            onClick={() => setContest(true)}
-          >
+          <button type="button" className={`reg-toggle-btn ${contest ? 'reg-toggle-on' : ''}`} onClick={() => setContest(true)}>
             {t('yes', locale)}
           </button>
-          <button
-            type="button"
-            className={`reg-toggle-btn ${!contest ? 'reg-toggle-on' : ''}`}
-            onClick={() => setContest(false)}
-          >
+          <button type="button" className={`reg-toggle-btn ${!contest ? 'reg-toggle-on' : ''}`} onClick={() => setContest(false)}>
             {t('no', locale)}
           </button>
         </div>
