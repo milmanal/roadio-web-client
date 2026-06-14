@@ -34,6 +34,7 @@ export interface Quest {
   avatar?: string | null
   task_opener?: string | null
   random_sounds?: string[] | null
+  show_whatsapp_send?: boolean | null
   metro?: QuestMetro | null
 }
 

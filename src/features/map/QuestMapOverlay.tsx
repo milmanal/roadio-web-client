@@ -1,12 +1,16 @@
 import type { Quest } from '../../types'
+import { useQuestAudio } from './questAudio'
+import { loadQuestTask } from '../games/loadQuestTask'
 import './questMap.css'
 
 // The Babylon / road-quest map chrome, overlaid on the Mapbox canvas when a
-// quest is active. Mirrors the original native layout:
+// quest is active. Mirrors the original native layout (quest_content.xml):
 //  - top-left: professor avatar
 //  - top-centre: distance card (quest name · "בעוד X ק"מ" · next station)
+//  - centre: the professor's task opener button (→ "getstation" setup screen)
 //  - left edge: the "metro line" — a vertical strip of station icons, the one
 //    the player is heading to highlighted (user_next_station, 1-based).
+//  - bottom-left: mute toggle for the map background music.
 // Driven entirely by Configuration.quest.
 interface Props {
   quest: Quest
@@ -15,6 +19,8 @@ interface Props {
 export default function QuestMapOverlay({ quest }: Props) {
   const stations = quest.metro?.stations ?? []
   const nextOrder = quest.user_next_station
+  const muted = useQuestAudio((s) => s.muted)
+  const toggleMuted = useQuestAudio((s) => s.toggleMuted)
 
   return (
     <>
@@ -32,6 +38,16 @@ export default function QuestMapOverlay({ quest }: Props) {
         )}
       </div>
 
+      {quest.task_opener && (
+        <button
+          className="quest-task-opener"
+          onClick={() => void loadQuestTask('getstation')}
+          aria-label="open quest task"
+        >
+          <img src={quest.task_opener} alt="" />
+        </button>
+      )}
+
       {stations.length > 0 && (
         <div className="quest-stations">
           {stations.map((s) => {
@@ -48,6 +64,16 @@ export default function QuestMapOverlay({ quest }: Props) {
             )
           })}
         </div>
+      )}
+
+      {quest.map_music && (
+        <button
+          className="quest-mute"
+          onClick={toggleMuted}
+          aria-label={muted ? 'unmute music' : 'mute music'}
+        >
+          {muted ? '🔇' : '🔊'}
+        </button>
       )}
     </>
   )

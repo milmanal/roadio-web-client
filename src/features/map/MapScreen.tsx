@@ -11,6 +11,7 @@ import { useDrivingLoop } from '../driving/useDrivingLoop'
 import { useGeofence } from '../geofence/useGeofence'
 import { useMapMarkers } from './useMapMarkers'
 import { useProximity } from './useProximity'
+import { useQuestMusic } from './useQuestMusic'
 import { useSimDrive, SIM_ROUTES } from './useSimDrive'
 import GameCard from '../games/GameCard'
 import QuestMapOverlay from './QuestMapOverlay'
@@ -169,6 +170,8 @@ export default function MapScreen() {
   useMapMarkers(!sim)
   useProximity(true)
   useSimDrive(simRoute)
+  // Babylon quest map ambience (looping; pauses while a card is open).
+  useQuestMusic(quest?.map_music, isQuest)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
@@ -544,8 +547,10 @@ export default function MapScreen() {
         </button>
       )}
 
-      {/* Bottom bar: [game ›] on left · [destination] on right — single row */}
-      {destEditing && (
+      {/* Bottom bar: [game ›] on left · [destination] on right — single row.
+          Hidden in quest mode: Babylon drives its own chrome (no game switcher
+          / destination prompt — the quest sets its station via the task opener). */}
+      {!isQuest && destEditing && (
         <div className="map-dest-edit">
           {destSuggestions.length > 0 && (
             <div className="map-dest-suggestions">
@@ -575,6 +580,7 @@ export default function MapScreen() {
           </div>
         </div>
       )}
+      {!isQuest && (
       <div className="map-bottom-bar">
         <button
           className="map-bottom-dest"
@@ -586,6 +592,7 @@ export default function MapScreen() {
           {gameName || 'Trivia'} ›
         </button>
       </div>
+      )}
 
       {import.meta.env.DEV && (
         <div className="map-dev-row">
