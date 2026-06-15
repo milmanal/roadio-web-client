@@ -13,6 +13,8 @@
   border: 3px solid #fff;
   background: #cee5ee;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  padding: 0;
+  cursor: pointer;
 }
 
 .quest-avatar img {
@@ -91,6 +93,30 @@
 @keyframes quest-task-bob {
   0%, 100% { margin-top: 0; }
   50% { margin-top: -6px; }
+}
+
+/* Bulb/hint button — below avatar, shows when show_whatsapp_send is true. */
+.quest-hint-btn {
+  position: absolute;
+  top: calc(76px + env(safe-area-inset-top));
+  left: 12px;
+  z-index: 5;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quest-hint-btn:active {
+  transform: scale(0.92);
 }
 
 /* Background-music mute toggle (bottom-left, above the nav). */

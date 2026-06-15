@@ -18,9 +18,6 @@ export default function BabylonPage() {
   const { userId, locale, setHud } = useSession()
   const setConfig = useDriving((s) => s.setConfig)
 
-  // 'selection' = show iframe; 'register' = show Babylon reg form
-  const [view, setView] = useState<'selection' | 'register'>('selection')
-
   // registration form state
   const [nickname, setNickname] = useState('')
   const [phone, setPhone] = useState('')
@@ -40,31 +37,6 @@ export default function BabylonPage() {
     getTowns().then(setTowns).catch(() => {})
     getMoods().then(setMoods).catch(() => {})
   }, [])
-
-  // Listen for game selection from the iframe
-  useEffect(() => {
-    const handler = async (e: MessageEvent) => {
-      if (!e.data || e.data.type !== 'roadio:select') return
-      const quiz: string = e.data.quiz
-      if (!quiz || busy) return
-
-      if (quiz === BABEL_QUIZ) {
-        // Babylon requires registration before driving
-        setView('register')
-      } else {
-        // Other games (trivia, britania, etc.) — select and drive
-        setBusy(true)
-        try {
-          await selectGame(quiz)
-          navigate('/drive')
-        } finally {
-          setBusy(false)
-        }
-      }
-    }
-    window.addEventListener('message', handler)
-    return () => window.removeEventListener('message', handler)
-  }, [busy, navigate])
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -100,29 +72,6 @@ export default function BabylonPage() {
     }
   }
 
-  if (view === 'selection') {
-    const src = `/api/game_selection_2?user_id=${encodeURIComponent(userId)}`
-    return (
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
-        {busy && (
-          <div style={{
-            position: 'absolute', inset: 0, zIndex: 10,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(0,0,0,0.4)', color: '#fff', fontSize: 18,
-          }}>
-            טוען...
-          </div>
-        )}
-        <iframe
-          src={src}
-          style={{ flex: 1, border: 'none', width: '100%' }}
-          title="בחירת משחק"
-        />
-      </div>
-    )
-  }
-
-  // Registration form (Babylon only)
   return (
     <div className="page page-body reg-page">
       <h1 className="reg-title">{t('babylonTitle', locale)}</h1>
