@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useDriving } from '../../../store/driving'
 import { useSession } from '../../../store/session'
-import { reportEvents, NEXT_EVENT } from '../../../api/endpoints'
+import { reportEvents, fetchItems, NEXT_EVENT } from '../../../api/endpoints'
 import { APP_VERSION } from '../../../config'
 import type { RoadPoint } from '../../../types'
 
@@ -80,6 +80,14 @@ export default function QuestItemFrame({ point }: Props) {
         // advance locally regardless
       }
       dismissActive()
+      // Immediately refresh config so quest.user_next_station (and the station
+      // label) updates without waiting up to 10s for the next driving-loop tick.
+      try {
+        const res = await fetchItems({ user_id: userId, lat: latlng.lat, lng: latlng.lng })
+        if (res.configuration) useDriving.getState().setConfig(res.configuration)
+      } catch {
+        // non-fatal — driving loop will catch it on next tick
+      }
     }
 
     async function handleEvent(evType: string, params: URLSearchParams) {
