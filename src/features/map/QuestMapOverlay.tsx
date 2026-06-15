@@ -46,9 +46,14 @@ export default function QuestMapOverlay({ quest }: Props) {
       <div className="quest-distance">
         {quest.quest_name && <div className="quest-distance-name">{quest.quest_name}</div>}
         {quest.next_km_label && <div className="quest-distance-km">{quest.next_km_label}</div>}
-        {quest.next_station_name && (
-          <div className="quest-distance-station">{quest.next_station_name}</div>
-        )}
+        {(() => {
+          // Derive station name from the stations array using user_next_station as
+          // the key — the backend's next_station_name field is off-by-one (returns
+          // the previous station's name after completion).
+          const nextStation = stations.find((s) => s.station_order === nextOrder)
+          const name = nextStation?.station_name_disp ?? nextStation?.station_name ?? quest.next_station_name
+          return name ? <div className="quest-distance-station">{name}</div> : null
+        })()}
       </div>
 
       {quest.task_opener && (
