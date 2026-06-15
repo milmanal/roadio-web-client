@@ -4,6 +4,9 @@
 export interface FetchItemsRequest {
   user_id: string
   version: string
+  /** Identifies the web client so the backend emits /api-proxied hosts (instead
+      of the dead native premium host) in item html_payload + quest redirects. */
+  client?: string
   lat?: string | number | null
   lng?: string | number | null
   locale?: string | null
@@ -35,6 +38,7 @@ export interface ReportEvent {
 export interface EventsRequest {
   user_id: string
   version: string
+  client?: string
   lat?: string | number | null
   lng?: string | number | null
   events: Record<string, ReportEvent>

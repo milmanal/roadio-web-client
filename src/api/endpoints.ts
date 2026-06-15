@@ -38,11 +38,13 @@ export function getUserConfig(params: {
   })
 }
 
-/** Fetch road points for the current position. */
+/** Fetch road points for the current position. client=web → backend emits
+    /api-proxied hosts in quest item payloads/redirects (not the dead premium
+    host). */
 export function fetchItems(req: Partial<FetchItemsRequest> & {
   user_id: string
 }): Promise<RoadPointsResponse> {
-  const body: FetchItemsRequest = { version: APP_VERSION, ...req }
+  const body: FetchItemsRequest = { version: APP_VERSION, client: 'web', ...req }
   return postJson<RoadPointsResponse>('/v2/items', body)
 }
 
@@ -56,6 +58,7 @@ export function reportEvents(req: {
 }): Promise<EventsResponse> {
   const body: EventsRequest = {
     version: APP_VERSION,
+    client: 'web',
     user_id: req.user_id,
     events: req.events,
     lat: req.lat,
@@ -157,6 +160,7 @@ export function registerUser(fields: {
   return postJson<{ configuration: Configuration; status?: string }>('/v2/register', {
     user_id: fields.userId,
     version: APP_VERSION,
+    client: 'web',
     email: fields.email ?? '',
     nickname: fields.nickname,
     join_contest: fields.join_contest,

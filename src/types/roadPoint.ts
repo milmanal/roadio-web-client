@@ -74,9 +74,16 @@ export interface RoadPoint {
   marker_family: string | null
   top_marker: boolean | null
   html_template_name: string | null // e.g. "babel/pattern_lock.html"
+  // Backend-rendered self-contained HTML for the item (quest/Babylon items
+  // carry their whole UI here). NB: as embedded in /v2/items it targets the
+  // real roadio.io host for events; we re-fetch via /item/<id>?client=web to
+  // get the hash-bridge variant. See QuestItemFrame.
+  html_payload?: string | null
   crossword_pre_fill: boolean | null
   coder_mode: boolean | null
   org_game_item_type: string | null // e.g. "road_point", "task"
+  // True for premium road-quest (Babylon) items — drives the iframe renderer.
+  is_quest?: boolean
 
   extra_details: ExtraDetails | null
 

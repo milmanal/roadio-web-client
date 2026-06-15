@@ -11,17 +11,46 @@ import QuantitativeCard from './cards/QuantitativeCard'
 import StoryCard from './cards/StoryCard'
 import WebGameCard from './cards/WebGameCard'
 import FallbackCard from './cards/FallbackCard'
+import QuestItemFrame from './cards/QuestItemFrame'
+import AudioItem from './cards/AudioItem'
 // GeoGuessCard pulls in mapbox-gl — load it only when a geoguess card shows.
 const GeoGuessCard = lazy(() => import('./cards/GeoGuessCard'))
 import './games.css'
 
-const STORY_TYPES = new Set<RoadPointType>(['story', 'insta_story', 'narrator'])
+const STORY_TYPES = new Set<RoadPointType>(['story', 'insta_story'])
 const WEB_TYPES = new Set<RoadPointType>(['html', 'html_trivia'])
+// Special quest/Babylon item subtypes. On the wire these usually arrive as
+// type "html" (the server maps narrator/pattern_lock/etc. → html), so the real
+// gate is is_quest below; this set just catches them if a raw subtype leaks
+// through.
+const FRAME_TYPES = new Set<RoadPointType>([
+  'narrator',
+  'pattern_lock',
+  'sound_trivia',
+  'open_answer',
+  'mission_code_whatsapp',
+])
 
-type CardKind = 'geo' | 'quant' | 'web' | 'story' | 'question' | 'fallback'
+// A quest/Babylon item whose original look & feel lives in the backend's own
+// item HTML. We render it by iframing GET /item/<id>?client=web (hash bridge)
+// rather than reconstructing it. Real items arrive as type "html" + is_quest
+// with an html_payload; audio transition clips are handled separately.
+function isFrameItem(point: RoadPoint): boolean {
+  if (point.type === 'audio') return false
+  if (FRAME_TYPES.has(point.type)) return true
+  return (
+    point.is_quest === true &&
+    (point.type === 'html' || point.type === 'html_trivia' || !!point.html_payload)
+  )
+}
+
+type CardKind =
+  | 'geo' | 'quant' | 'web' | 'story' | 'question' | 'fallback' | 'frame' | 'audio'
 
 function cardKind(point: RoadPoint): CardKind {
   const type = point.type
+  if (type === 'audio') return 'audio'
+  if (isFrameItem(point)) return 'frame'
   if (type === 'geoguess') return 'geo'
   if (type === 'quantitative') return 'quant'
   if (WEB_TYPES.has(type) || point.html_template_name) return 'web'
@@ -114,6 +143,17 @@ export default function GameCard() {
   }
 
   const kind = cardKind(point)
+
+  // Quest/Babylon special items: render the backend's own item HTML full-screen
+  // (it owns its UI + scoring via the hash bridge). Must take priority over the
+  // trivia/quiz branches below.
+  if (kind === 'frame') {
+    return <QuestItemFrame key={point.id} point={point} />
+  }
+  // Audio transition clips: no UI — autoplay + auto-advance.
+  if (kind === 'audio') {
+    return <AudioItem key={point.id} point={point} />
+  }
 
   // Full-screen themed flow (signpost buttons, multiple attempts, reaction,
   // story reveal + vote, end-of-quiz summary). It owns its own reporting/

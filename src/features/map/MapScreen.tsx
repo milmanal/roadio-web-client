@@ -11,8 +11,10 @@ import { useDrivingLoop } from '../driving/useDrivingLoop'
 import { useGeofence } from '../geofence/useGeofence'
 import { useMapMarkers } from './useMapMarkers'
 import { useProximity } from './useProximity'
+import { useQuestMusic } from './useQuestMusic'
 import { useSimDrive, SIM_ROUTES } from './useSimDrive'
 import GameCard from '../games/GameCard'
+import QuestMapOverlay from './QuestMapOverlay'
 import { t } from '../../lib/i18n'
 import { distanceMeters } from '../../lib/geo'
 import { getDeviceId, setDeviceId, DEMO_USER_ID } from '../../lib/deviceId'
@@ -120,6 +122,9 @@ export default function MapScreen() {
   const setActive = useDriving((s) => s.setActive)
   const triggerItems = useDriving((s) => s.triggerItems)
   const markersV2 = useDriving((s) => s.config?.markers_v2)
+  // Quest (Babylon) chrome replaces the default trivia HUD when active.
+  const quest = useDriving((s) => s.config?.quest)
+  const isQuest = useDriving((s) => !!(s.config?.is_quest || s.config?.is_road_quest))
   const markersStore = useMarkers()
 
   // Dev: simulated driving takes over the position feed (real geolocation +
@@ -165,6 +170,8 @@ export default function MapScreen() {
   useMapMarkers(!sim)
   useProximity(true)
   useSimDrive(simRoute)
+  // Babylon quest map ambience (looping; pauses while a card is open).
+  useQuestMusic(quest?.map_music, isQuest)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
@@ -473,7 +480,11 @@ export default function MapScreen() {
       )}
       <div ref={containerRef} className="map-canvas" />
 
+      {/* Quest (Babylon) chrome replaces the default trivia HUD. */}
+      {isQuest && quest && <QuestMapOverlay quest={quest} />}
+
       {/* Top HUD: Points + Place stats and the user avatar/name. */}
+      {!isQuest && (
       <div className="map-top">
         <div className="map-top-stats">
           <div className="map-stat">
@@ -503,14 +514,17 @@ export default function MapScreen() {
           </span>
         </button>
       </div>
+      )}
 
-      {/* Floating next-item distance pill. */}
+      {/* Floating next-item distance pill (trivia only — quest shows its own). */}
+      {!isQuest && (
       <div className="map-nearby">
         <span className="map-nearby-lbl">{t('nearbyItem', locale)}</span>
         <span className="map-nearby-val">
           {nextItemKm} <span className="map-nearby-unit">km</span>
         </span>
       </div>
+      )}
 
       {!following && (
         <button
@@ -533,8 +547,10 @@ export default function MapScreen() {
         </button>
       )}
 
-      {/* Bottom bar: [game ›] on left · [destination] on right — single row */}
-      {destEditing && (
+      {/* Bottom bar: [game ›] on left · [destination] on right — single row.
+          Hidden in quest mode: Babylon drives its own chrome (no game switcher
+          / destination prompt — the quest sets its station via the task opener). */}
+      {!isQuest && destEditing && (
         <div className="map-dest-edit">
           {destSuggestions.length > 0 && (
             <div className="map-dest-suggestions">
@@ -564,6 +580,7 @@ export default function MapScreen() {
           </div>
         </div>
       )}
+      {!isQuest && (
       <div className="map-bottom-bar">
         <button
           className="map-bottom-dest"
@@ -575,6 +592,7 @@ export default function MapScreen() {
           {gameName || 'Trivia'} ›
         </button>
       </div>
+      )}
 
       {import.meta.env.DEV && (
         <div className="map-dev-row">
