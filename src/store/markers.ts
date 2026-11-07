@@ -10,7 +10,9 @@ interface MarkersState {
   openMissions: MapMarker[]
   completedMissions: MapMarker[]
   seenItems: MapMarker[]
-  setAll: (m: Partial<Omit<MarkersState, 'setAll'>>) => void
+  setAll: (m: Partial<Omit<MarkersState, 'setAll' | 'clear'>>) => void
+  /** Drop every marker (e.g. after switching games, before the refetch). */
+  clear: () => void
 }
 
 export const useMarkers = create<MarkersState>((set) => ({
@@ -21,4 +23,13 @@ export const useMarkers = create<MarkersState>((set) => ({
   completedMissions: [],
   seenItems: [],
   setAll: (m) => set(m),
+  clear: () =>
+    set({
+      cars: [],
+      items: [],
+      missions: [],
+      openMissions: [],
+      completedMissions: [],
+      seenItems: [],
+    }),
 }))

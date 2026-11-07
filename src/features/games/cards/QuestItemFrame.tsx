@@ -43,13 +43,37 @@ function redirectTarget(html: string | null | undefined): string | null {
   return m ? toProxy(m[1]) : null
 }
 
+// The item id the iframe is currently showing. Quest items can chain to the
+// next item INSIDE the same iframe (window.location = "/item/<next>?..."), so
+// this can differ from the card's own point.id. Returns null for non-item pages
+// (e.g. a redirect wrapper's /personal_page target).
+function frameItemId(win: Window | null | undefined): number | null {
+  try {
+    const m = win?.location.pathname.match(/\/item\/(\d+)/)
+    return m ? Number(m[1]) : null
+  } catch {
+    return null // cross-origin
+  }
+}
+
+// Current GPS fix as the /v2/events lat/lng strings. Read at report time from
+// the store — NOT a React dependency, because the position changes every ~2s
+// while driving and re-running the frame's effect would reset its state.
+function currentLatLng() {
+  const pos = useDriving.getState().position
+  return {
+    lat: pos ? String(pos.lat) : null,
+    lng: pos ? String(pos.lng) : null,
+  }
+}
+
 export default function QuestItemFrame({ point }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const userId = useSession((s) => s.userId)
   const setHud = useSession((s) => s.setHud)
-  const position = useDriving((s) => s.position)
   const dismissActive = useDriving((s) => s.dismissActive)
   const setResult = useDriving((s) => s.setResult)
+  const markSeen = useDriving((s) => s.markSeen)
 
   const redir = redirectTarget(point.html_payload)
   const src =
@@ -60,22 +84,26 @@ export default function QuestItemFrame({ point }: Props) {
     const iframe = iframeRef.current
     if (!iframe) return
 
-    const latlng = {
-      lat: position ? String(position.lat) : null,
-      lng: position ? String(position.lng) : null,
-    }
     let lastHash = ''
     let advancing = false
+    // Every real item shown in this iframe (the card's own item plus any it
+    // chained to). All of them are completed when the frame advances.
+    const visited = new Set<number>()
+    if (!redir) visited.add(point.id)
 
     async function advance() {
       if (advancing) return
       advancing = true
+      const ids = [...visited]
+      // Items chained inside the iframe must not replay as their own cards.
+      markSeen(ids)
+      const events: Record<string, { answer: string }> = {}
+      for (const id of ids.length ? ids : [point.id]) {
+        events[String(id)] = { answer: NEXT_EVENT }
+      }
+      const latlng = currentLatLng()
       try {
-        await reportEvents({
-          user_id: userId,
-          ...latlng,
-          events: { [String(point.id)]: { answer: NEXT_EVENT } },
-        })
+        await reportEvents({ user_id: userId, ...latlng, events })
       } catch {
         // advance locally regardless
       }
@@ -97,14 +125,20 @@ export default function QuestItemFrame({ point }: Props) {
           void advance()
           return
         }
-        const seenId = params.get('seen_id') || String(point.id)
+        // Items send seen_id=0 when they have no override (e.g. pattern lock).
+        // "0" is not a real item — fall back to the item actually on screen,
+        // or the answer gets stored against item 0 and the item never counts
+        // as solved (the quest then re-serves it forever).
+        const seenParam = Number(params.get('seen_id'))
+        const itemId =
+          seenParam > 0 ? seenParam : frameItemId(iframe?.contentWindow) ?? point.id
         const isRight = params.get('is_right') === 'true'
         setResult(point.id, isRight)
         try {
           const res = await reportEvents({
             user_id: userId,
-            ...latlng,
-            events: { [seenId]: { answer } },
+            ...currentLatLng(),
+            events: { [String(itemId)]: { answer } },
           })
           setHud({ score: String(res.score), rank: String(res.rank) })
         } catch {
@@ -119,8 +153,10 @@ export default function QuestItemFrame({ point }: Props) {
     function attachHashListener() {
       const win = iframe?.contentWindow
       if (!win) return undefined
+      const shownId = frameItemId(win)
+      if (shownId != null) visited.add(shownId)
       const onHash = () => {
-        let raw = ''
+        let raw: string
         try {
           raw = win.location.hash // e.g. "#/answer?answer=next_event&..."
         } catch {
@@ -147,6 +183,7 @@ export default function QuestItemFrame({ point }: Props) {
     let detach: (() => void) | undefined
     const onLoad = () => {
       detach?.()
+      lastHash = ''
       detach = attachHashListener()
     }
     iframe.addEventListener('load', onLoad)
@@ -160,7 +197,7 @@ export default function QuestItemFrame({ point }: Props) {
       iframe.removeEventListener('load', onLoad)
       detach?.()
     }
-  }, [point.id, userId, position, dismissActive, setHud, setResult])
+  }, [point.id, redir, userId, dismissActive, setHud, setResult, markSeen])
 
   return (
     <div className="quest-frame">

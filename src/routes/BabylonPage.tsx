@@ -5,6 +5,7 @@ import { getMoods, getTowns, registerUser } from '../api/endpoints'
 import { selectGame } from '../features/games/selectGame'
 import { useSession } from '../store/session'
 import { useDriving } from '../store/driving'
+import { useMarkers } from '../store/markers'
 import { t } from '../lib/i18n'
 import TownAutocomplete from '../components/TownAutocomplete'
 import type { Mood, Town } from '../types'
@@ -52,12 +53,24 @@ export default function BabylonPage() {
         phone_number: phone.trim(),
         destination: destination.trim(),
         email: email.trim(),
-        join_contest: contest,
+        // Always true for Babel, whatever the contest toggle says: the backend
+        // reads join_contest as "activate this game"
+        // (users_logic.update_registration_details). With false, org_game_active
+        // stays off, the user remains in road-trivia mode, and nearby trivia
+        // pins keep firing instead of the Babel road quest.
+        // TODO: the backend has no separate "contest" flag yet, so `contest`
+        // currently has no effect on this page.
+        join_contest: true,
         town_id: townId || null,
         mood_id: moodId || null,
         game_code: gameCode.trim(),
       })
       setConfig(cfg)
+      // The game just switched to Babel: drop the trivia pins and any queued
+      // trivia cards so the proximity loop can't fire them before the map
+      // refetches markers for the new game.
+      useMarkers.getState().clear()
+      useDriving.getState().clearCards()
       setHud({
         username: cfg.username ?? nickname.trim(),
         userLabel: cfg.user_label ?? '',

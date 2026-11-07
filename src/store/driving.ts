@@ -37,6 +37,11 @@ interface DrivingState {
   /** Promote the next queued card to active if none is showing. */
   advance: () => void
   dismissActive: () => void
+  /** Mark ids as already played and drop them from the queue (e.g. items a
+   *  quest frame chained to internally, so they don't replay as cards). */
+  markSeen: (ids: number[]) => void
+  /** Drop the open card and anything queued (e.g. after switching games). */
+  clearCards: () => void
   reset: () => void
 }
 
@@ -79,6 +84,18 @@ export const useDriving = create<DrivingState>((set, get) => ({
     set({ activeCard: null })
     get().advance()
   },
+
+  markSeen: (ids) => {
+    if (ids.length === 0) return
+    const nextSeen = new Set(get().seenItemIds)
+    ids.forEach((id) => nextSeen.add(id))
+    set({
+      seenItemIds: nextSeen,
+      queue: get().queue.filter((p) => !ids.includes(p.id)),
+    })
+  },
+
+  clearCards: () => set({ queue: [], activeCard: null }),
 
   reset: () =>
     set({
