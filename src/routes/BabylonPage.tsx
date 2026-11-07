@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getMoods, getTowns, registerUser } from '../api/endpoints'
+import { getMoods, registerUser } from '../api/endpoints'
 import { selectGame } from '../features/games/selectGame'
 import { useSession } from '../store/session'
 import { useDriving } from '../store/driving'
 import { useMarkers } from '../store/markers'
 import { t } from '../lib/i18n'
-import TownAutocomplete from '../components/TownAutocomplete'
-import type { Mood, Town } from '../types'
+import type { Mood } from '../types'
 import './RegistrationPage.css'
 
 const BABEL_GAME_ID = 496
@@ -24,18 +23,14 @@ export default function BabylonPage() {
   const [phone, setPhone] = useState('')
   const [destination, setDestination] = useState('')
   const [email, setEmail] = useState('')
-  const [contest, setContest] = useState(true)
-  const [townId, setTownId] = useState('')
   const [moodId, setMoodId] = useState('')
   const [gameCode, setGameCode] = useState('')
-  const [towns, setTowns] = useState<Town[]>([])
   const [moods, setMoods] = useState<Mood[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(false)
 
-  // Load towns/moods in background so they're ready when user reaches reg form
+  // Load moods in background so they're ready when user reaches reg form
   useEffect(() => {
-    getTowns().then(setTowns).catch(() => {})
     getMoods().then(setMoods).catch(() => {})
   }, [])
 
@@ -53,15 +48,12 @@ export default function BabylonPage() {
         phone_number: phone.trim(),
         destination: destination.trim(),
         email: email.trim(),
-        // Always true for Babel, whatever the contest toggle says: the backend
-        // reads join_contest as "activate this game"
-        // (users_logic.update_registration_details). With false, org_game_active
-        // stays off, the user remains in road-trivia mode, and nearby trivia
-        // pins keep firing instead of the Babel road quest.
-        // TODO: the backend has no separate "contest" flag yet, so `contest`
-        // currently has no effect on this page.
+        // Must be true: despite its name, the backend reads join_contest as
+        // "activate this game" (users_logic.update_registration_details). With
+        // false, org_game_active stays off, the user remains in road-trivia
+        // mode, and nearby trivia pins keep firing instead of the Babel quest.
         join_contest: true,
-        town_id: townId || null,
+        town_id: null,
         mood_id: moodId || null,
         game_code: gameCode.trim(),
       })
@@ -119,24 +111,6 @@ export default function BabylonPage() {
           placeholder={t('emailLabel', locale)}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-        />
-
-        <div className="reg-field-lbl">{t('joinContest', locale)}</div>
-        <div className="reg-toggle">
-          <button type="button" className={`reg-toggle-btn ${contest ? 'reg-toggle-on' : ''}`} onClick={() => setContest(true)}>
-            {t('yes', locale)}
-          </button>
-          <button type="button" className={`reg-toggle-btn ${!contest ? 'reg-toggle-on' : ''}`} onClick={() => setContest(false)}>
-            {t('no', locale)}
-          </button>
-        </div>
-
-        <TownAutocomplete
-          towns={towns}
-          value={townId}
-          onChange={setTownId}
-          placeholder={t('townLabel', locale)}
-          inputClassName="reg-input"
         />
 
         <div className="reg-field-lbl">{t('moodLabel', locale)}</div>
