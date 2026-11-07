@@ -13,6 +13,7 @@ import { useMapMarkers } from './useMapMarkers'
 import { useProximity } from './useProximity'
 import { useQuestMusic } from './useQuestMusic'
 import { useSimDrive, SIM_ROUTES } from './useSimDrive'
+import { useQuestTestDrive, startFreshBabelUser, skipCurrentClip } from '../dev/questTest'
 import GameCard from '../games/GameCard'
 import QuestMapOverlay from './QuestMapOverlay'
 import { t } from '../../lib/i18n'
@@ -132,6 +133,18 @@ export default function MapScreen() {
   // route's area, and walks the car along it so questions pop as you pass pins.
   const [simRoute, setSimRoute] = useState<string | null>(null)
   const sim = simRoute != null
+  // Dev: Babel quest test drive (see features/dev/questTest.ts). Keeps the
+  // real /v2/items loop running, unlike the route simulator above.
+  // Survives reloads (sessionStorage) so a test run can continue after one.
+  const [questDrive, setQuestDriveState] = useState(
+    () => import.meta.env.DEV && sessionStorage.getItem('roadio.questDrive') === '1',
+  )
+  const setQuestDrive = (update: (v: boolean) => boolean) =>
+    setQuestDriveState((v) => {
+      const next = update(v)
+      sessionStorage.setItem('roadio.questDrive', next ? '1' : '0')
+      return next
+    })
 
   // Destination prompt — stored in sessionStorage, reset each session.
   const [destination, setDestination] = useState(() =>
@@ -164,12 +177,13 @@ export default function MapScreen() {
   }
 
   // Map screen drives the whole live loop.
-  useGeolocation(!sim)
+  useGeolocation(!sim && !questDrive)
   useDrivingLoop(!sim)
   useGeofence(true)
   useMapMarkers(!sim)
   useProximity(true)
   useSimDrive(simRoute)
+  useQuestTestDrive(questDrive)
   // Babylon quest map ambience (looping; pauses while a card is open).
   useQuestMusic(quest?.map_music, isQuest)
 
@@ -635,6 +649,30 @@ export default function MapScreen() {
             }
           >
             👤
+          </button>
+          {/* Babel quest test mode: fresh user from station 1, a car that
+              drives to the current station, and a clip skipper. */}
+          <button
+            className="map-dev-btn"
+            onClick={() => void startFreshBabelUser()}
+            title="New test user signed up for Babel (restart from station 1)"
+          >
+            🆕 Babel
+          </button>
+          <button
+            className={`map-dev-btn ${questDrive ? 'map-dev-on' : ''}`}
+            onClick={() => setQuestDrive((v) => !v)}
+            disabled={sim}
+            title="Quest drive: drive to the current station and keep moving"
+          >
+            🧪 Quest drive
+          </button>
+          <button
+            className="map-dev-btn"
+            onClick={() => skipCurrentClip()}
+            title="Skip the playing clip to its end"
+          >
+            ⏭
           </button>
         </div>
       )}

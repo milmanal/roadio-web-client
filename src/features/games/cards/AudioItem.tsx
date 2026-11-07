@@ -3,6 +3,7 @@ import { useDriving } from '../../../store/driving'
 import { useSession } from '../../../store/session'
 import { reportEvents, NEXT_EVENT } from '../../../api/endpoints'
 import type { RoadPoint } from '../../../types'
+import { registerDevClip } from '../../dev/questTest'
 
 // `audio` items are not HTML cards — they're between-station transition /
 // narration clips. The original app played question_voice in the background
@@ -48,6 +49,7 @@ export default function AudioItem({ point }: Props) {
     }
     let cancelled = false
     const audio = new Audio(url)
+    if (import.meta.env.DEV) registerDevClip(audio)
     audio.onended = () => void advance()
     // Fallback: if metadata never loads or playback stalls, advance after a
     // bounded wait so the queue never stalls. Once the clip's length is known,
@@ -67,6 +69,7 @@ export default function AudioItem({ point }: Props) {
     })
     return () => {
       cancelled = true
+      if (import.meta.env.DEV) registerDevClip(null)
       window.clearTimeout(fallback)
       audio.pause()
     }
