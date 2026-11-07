@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getMoods, getTowns, registerUser } from '../api/endpoints'
+import { getMoods, registerUser } from '../api/endpoints'
 import { useSession } from '../store/session'
 import { useDriving } from '../store/driving'
 import { t } from '../lib/i18n'
-import TownAutocomplete from '../components/TownAutocomplete'
-import type { Mood, Town } from '../types'
+import type { Mood } from '../types'
 import './RegistrationPage.css'
 
 export default function RegistrationPage() {
@@ -15,17 +14,13 @@ export default function RegistrationPage() {
 
   const [email, setEmail] = useState('')
   const [nickname, setNickname] = useState('')
-  const [contest, setContest] = useState(true)
-  const [townId, setTownId] = useState('')
   const [moodId, setMoodId] = useState('')
   const [gameCode, setGameCode] = useState('')
-  const [towns, setTowns] = useState<Town[]>([])
   const [moods, setMoods] = useState<Mood[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    getTowns().then(setTowns).catch(() => {})
     getMoods().then(setMoods).catch(() => {})
   }, [])
 
@@ -39,8 +34,12 @@ export default function RegistrationPage() {
         userId,
         email: email.trim(),
         nickname: nickname.trim(),
-        join_contest: contest,
-        town_id: townId || null,
+        // Keep true: the backend reads join_contest as "keep my current game
+        // active". With false it deactivates the user's game, so a Babel
+        // player registering from the map would be dropped out of the quest.
+        // For a plain trivia user it changes nothing.
+        join_contest: true,
+        town_id: null,
         mood_id: moodId || null,
         game_code: gameCode.trim(),
       })
@@ -77,32 +76,6 @@ export default function RegistrationPage() {
           value={nickname}
           onChange={(e) => setNickname(e.target.value)}
           required
-        />
-
-        <div className="reg-field-lbl">{t('joinContest', locale)}</div>
-        <div className="reg-toggle">
-          <button
-            type="button"
-            className={`reg-toggle-btn ${contest ? 'reg-toggle-on' : ''}`}
-            onClick={() => setContest(true)}
-          >
-            {t('yes', locale)}
-          </button>
-          <button
-            type="button"
-            className={`reg-toggle-btn ${!contest ? 'reg-toggle-on' : ''}`}
-            onClick={() => setContest(false)}
-          >
-            {t('no', locale)}
-          </button>
-        </div>
-
-        <TownAutocomplete
-          towns={towns}
-          value={townId}
-          onChange={setTownId}
-          placeholder={t('townLabel', locale)}
-          inputClassName="reg-input"
         />
 
         <div className="reg-field-lbl">{t('moodLabel', locale)}</div>
