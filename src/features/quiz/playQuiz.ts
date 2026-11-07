@@ -56,6 +56,8 @@ export async function playQuiz({ quizId, quizName }: PlayQuizArgs): Promise<numb
     username: res.username ?? session.username,
   })
   if (res.configuration) driving.setConfig(res.configuration)
+  // The user asked for this quiz: never hold its cards back.
+  driving.releaseCardHold()
 
   if (items.length) return driving.triggerItems(items)
   return 0

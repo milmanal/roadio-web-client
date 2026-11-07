@@ -32,6 +32,9 @@ export default function BabylonPage() {
   // Load moods in background so they're ready when user reaches reg form
   useEffect(() => {
     getMoods().then(setMoods).catch(() => {})
+    // Download the map screen (incl. mapbox-gl, ~1.5 MB) while the user fills
+    // the form, so the quest map opens at once after sign-up.
+    void import('../features/map/MapScreen').catch(() => {})
   }, [])
 
   async function onSubmit(e: FormEvent) {

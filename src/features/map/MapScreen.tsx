@@ -44,6 +44,10 @@ const GROUP_ICON: [keyof MapMarkersResponse, string, string][] = [
 
 type MarkerFC = GeoJSON.FeatureCollection<GeoJSON.Point>
 
+function isQuestConfig(c: Configuration | null | undefined): boolean {
+  return !!(c?.is_quest || c?.is_road_quest)
+}
+
 /**
  * Resolve a marker's server-driven icon URL from `markers_v2[typeKey]` by
  * family, falling back to the `default` family. Returns null when config has
@@ -77,17 +81,24 @@ function buildMarkerFC(
   },
   markersV2?: Configuration['markers_v2'],
   isLoaded?: (id: string) => boolean,
+  /** Quest mode: draw station (mission) markers only with their real station
+   *  icon. The local default mission art is a blue "1000 points" task scroll,
+   *  which must never stand in for a quest station. */
+  questStationsOnly = false,
 ): MarkerFC {
   const features: MarkerFC['features'] = []
   for (const [group, localIcon, typeKey] of GROUP_ICON) {
     const list = store[group as keyof typeof store] as MapMarker[]
+    const isMissionGroup = typeKey.includes('mission')
     for (const m of list ?? []) {
       const lng = Number(m.lng)
       const lat = Number(m.lat)
       if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue
       const label = m.content ?? m.map_label_info
       const srvUrl = serverIconUrl(markersV2, typeKey, m.family)
-      const icon = srvUrl && isLoaded?.(srvUrl) ? srvUrl : localIcon
+      const srvReady = !!srvUrl && !!isLoaded?.(srvUrl)
+      if (questStationsOnly && isMissionGroup && !srvReady) continue
+      const icon = srvReady ? (srvUrl as string) : localIcon
       features.push({
         type: 'Feature',
         geometry: { type: 'Point', coordinates: [lng, lat] },
@@ -125,7 +136,7 @@ export default function MapScreen() {
   const markersV2 = useDriving((s) => s.config?.markers_v2)
   // Quest (Babylon) chrome replaces the default trivia HUD when active.
   const quest = useDriving((s) => s.config?.quest)
-  const isQuest = useDriving((s) => !!(s.config?.is_quest || s.config?.is_road_quest))
+  const isQuest = useDriving((s) => isQuestConfig(s.config))
   const markersStore = useMarkers()
 
   // Dev: simulated driving takes over the position feed (real geolocation +
@@ -291,7 +302,12 @@ export default function MapScreen() {
       if (!map.getSource('markers')) {
         map.addSource('markers', {
           type: 'geojson',
-          data: buildMarkerFC(useMarkers.getState()),
+          data: buildMarkerFC(
+            useMarkers.getState(),
+            undefined,
+            undefined,
+            isQuestConfig(useDriving.getState().config),
+          ),
         })
         map.addLayer({
           id: 'mk-icons',
@@ -460,13 +476,21 @@ export default function MapScreen() {
     const isLoaded = (id: string) => loadedIcons.current.has(id)
     const setData = () => {
       const src = map.getSource('markers') as mapboxgl.GeoJSONSource | undefined
-      src?.setData(buildMarkerFC(useMarkers.getState(), markersV2, isLoaded))
+      src?.setData(buildMarkerFC(useMarkers.getState(), markersV2, isLoaded, isQuest))
     }
     setData()
 
     // Kick off loads for any referenced server icons not yet in the style.
     if (!markersV2) return
     const wanted = new Set<string>()
+    // Quest: preload every station icon up front so each new station appears
+    // with its real icon at once (it is hidden until loaded — see above).
+    if (isQuest) {
+      for (const [, , typeKey] of GROUP_ICON) {
+        if (!typeKey.includes('mission')) continue
+        for (const s of markersV2[typeKey] ?? []) if (s.icon) wanted.add(s.icon)
+      }
+    }
     for (const [group, , typeKey] of GROUP_ICON) {
       const list = markersStore[group as keyof typeof markersStore] as MapMarker[]
       for (const m of list ?? []) {
@@ -485,7 +509,7 @@ export default function MapScreen() {
         setData() // re-render so features pick up the now-loaded icon
       })
     }
-  }, [markersStore, markersV2, layersReady])
+  }, [markersStore, markersV2, layersReady, isQuest])
 
   return (
     <div className="map-screen">

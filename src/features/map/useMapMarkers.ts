@@ -34,8 +34,15 @@ export function useMapMarkers(active: boolean) {
       ? { lat: 32.0853, lng: 34.7818, ts: 0 }
       : null
 
+    // A forced refresh requested while a fetch is in flight runs right after
+    // it, so a state change is never lost to the in-flight guard.
+    let pendingForce = false
+
     async function fetchMarkers(force = false) {
-      if (inFlight.current) return
+      if (inFlight.current) {
+        if (force) pendingForce = true
+        return
+      }
       const pos = driving().position ?? (firstDone.current ? null : DEV_FALLBACK)
       if (!pos) return
       // NOTE: do NOT gate on config.fetch_markers — it is false even for users
@@ -65,6 +72,10 @@ export function useMapMarkers(active: boolean) {
         // transient — retry next tick
       } finally {
         inFlight.current = false
+        if (pendingForce) {
+          pendingForce = false
+          void fetchMarkers(true)
+        }
       }
     }
 
@@ -82,6 +93,18 @@ export function useMapMarkers(active: boolean) {
       // A card just closed → force a refresh so the answered item moves to
       // seen_items and re-renders with the ✓ icon.
       if (prev.activeCard && !s.activeCard) void fetchMarkers(true)
+      // The quest moved to another station, or the game mode changed (e.g.
+      // quest → trivia): the pins on the map belong to the old state, so
+      // refresh right away instead of waiting for the next movement-gated poll.
+      const q = s.config?.quest
+      const pq = prev.config?.quest
+      if (
+        q?.user_next_station !== pq?.user_next_station ||
+        q?.next_station_name !== pq?.next_station_name ||
+        !!s.config?.is_road_quest !== !!prev.config?.is_road_quest
+      ) {
+        void fetchMarkers(true)
+      }
     })
     const tick = setInterval(() => {
       if (moved()) void fetchMarkers()

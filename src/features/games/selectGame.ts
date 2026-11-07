@@ -37,6 +37,8 @@ export async function selectGame(quiz: string): Promise<boolean> {
 
   Sounds.gameStart()
   if (res.configuration) driving.setConfig(res.configuration)
+  // The user picked a game on purpose: no post-quest card hold.
+  driving.releaseCardHold()
   session.setHud({
     score: String(res.points ?? res.score ?? '0'),
     rank: String(res.rank ?? '-'),
