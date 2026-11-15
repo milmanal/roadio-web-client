@@ -554,8 +554,10 @@ export default function MapScreen() {
       </div>
       )}
 
-      {/* Floating next-item distance pill (trivia only — quest shows its own). */}
-      {!isQuest && (
+      {/* Floating next-item distance pill (trivia only — quest shows its own).
+          Shown only for a real distance: not before the server sent one ("-"),
+          and not the server's 60 km "nothing nearby" default. */}
+      {!isQuest && isRealNextKm(nextItemKm) && (
       <div className="map-nearby">
         <span className="map-nearby-lbl">{t('nearbyItem', locale)}</span>
         <span className="map-nearby-val">
@@ -704,4 +706,12 @@ export default function MapScreen() {
       <GameCard />
     </div>
   )
+}
+
+// The server reports 60 km (DEFAULT_MAX_DIST) when it has no nearby item, and
+// the HUD holds "-" until the first response. Neither is a real distance.
+const NO_ITEM_KM = 60
+function isRealNextKm(value: string): boolean {
+  const km = Number(value)
+  return Number.isFinite(km) && km > 0 && km < NO_ITEM_KM
 }
