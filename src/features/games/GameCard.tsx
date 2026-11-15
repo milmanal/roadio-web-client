@@ -155,7 +155,7 @@ export default function GameCard() {
     return <AudioItem key={point.id} point={point} />
   }
 
-  // Full-screen themed flow (signpost buttons, multiple attempts, reaction,
+  // Full-screen trivia flow (fitted answer buttons, multiple attempts, reaction,
   // story reveal + vote, end-of-quiz summary). It owns its own reporting/
   // advance, so it renders outside the bottom-sheet shell. key per item id so
   // internal flow state resets when the queue advances.
@@ -167,7 +167,7 @@ export default function GameCard() {
   const isQuizItem = point.quiz_name != null || point.is_quiz === true
   const isWebGame = !!point.html_template_name
   // Anything with answer choices (question OR quantitative number-pick, on the
-  // map or in a quiz) → themed signpost card. Geoguess keeps its own map card.
+  // map or in a quiz) → full-screen trivia card. Geoguess keeps its own map card.
   if (hasChoices && kind !== 'geo') {
     return <TriviaCard key={point.id} point={point} />
   }

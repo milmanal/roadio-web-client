@@ -29,11 +29,30 @@
 .card {
   width: 100%;
   max-width: 520px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 20px 20px 0 0;
-  padding: 20px 18px calc(18px + env(safe-area-inset-bottom));
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.45);
+  background: #fff;
+  color: #0f2d3d;
+  border-radius: 26px 26px 0 0;
+  padding: 10px 18px calc(18px + env(safe-area-inset-bottom));
+  box-shadow: 0 -12px 40px rgba(4, 28, 48, 0.35);
+  animation: sheet-up 0.32s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+/* grab handle */
+.card::before {
+  content: '';
+  display: block;
+  width: 42px;
+  height: 5px;
+  border-radius: 3px;
+  background: #d5e2ea;
+  margin: 0 auto 12px;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
 }
 
 .card-inner {
@@ -47,13 +66,14 @@
 .card-q {
   font-size: 20px;
   line-height: 1.35;
+  font-weight: 800;
   margin: 0;
+  color: #0f2d3d;
 }
 
 .card-story {
-  color: var(--text);
-  opacity: 0.85;
-  line-height: 1.5;
+  color: #36566a;
+  line-height: 1.6;
   margin: 0;
   white-space: pre-line;
 }
@@ -63,12 +83,37 @@
 }
 
 .card-html {
-  line-height: 1.5;
+  line-height: 1.6;
+  color: #36566a;
+}
+
+.card .muted {
+  color: #6b8291;
+}
+
+/* Card actions only — not choices, and not the map's own controls. */
+.card-inner > button,
+.card .feedback button,
+.open-answer button {
+  background: linear-gradient(180deg, #2bb0ee, #1b8fd0);
+  color: #fff;
+  border-radius: 14px;
+  padding: 14px 18px;
+  font-size: 17px;
+  font-weight: 800;
+  box-shadow: 0 6px 16px rgba(27, 143, 208, 0.3);
+}
+
+.card-inner > button:disabled,
+.card .feedback button:disabled,
+.open-answer button:disabled {
+  opacity: 0.55;
+  box-shadow: none;
 }
 
 .media-img {
   width: 100%;
-  border-radius: 12px;
+  border-radius: 14px;
   object-fit: cover;
 }
 
@@ -76,7 +121,7 @@
   width: 100%;
   aspect-ratio: 16 / 9;
   border: 0;
-  border-radius: 12px;
+  border-radius: 14px;
 }
 
 .media-audio {
@@ -95,31 +140,39 @@
 }
 
 .choice {
-  background: var(--bg);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  background: #fff;
+  color: #0f2d3d;
+  border: 2px solid #e1ecf2;
+  border-radius: 16px;
   padding: 14px 16px;
   font-size: 16px;
+  font-weight: 700;
   text-align: start;
   flex: 1;
+  box-shadow: 0 2px 0 #e1ecf2;
+  transition: transform 0.12s ease, border-color 0.15s ease;
+}
+
+.choice:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .choices-num .choice {
   min-width: 72px;
   text-align: center;
+  font-size: 20px;
 }
 
 .choice-right {
-  border-color: var(--good);
-  background: rgba(61, 220, 132, 0.15);
-  color: var(--good);
+  border-color: #22c55e;
+  background: #e9f9ef;
+  color: #116b34;
 }
 
 .choice-wrong {
-  border-color: var(--bad);
-  background: rgba(255, 93, 93, 0.12);
-  color: var(--bad);
+  border-color: #ef4444;
+  background: #fdecec;
+  color: #9b1c1c;
 }
 
 .open-answer {
@@ -129,18 +182,18 @@
 
 .open-answer input {
   flex: 1;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  background: #f3f8fb;
+  border: 2px solid #e1ecf2;
+  border-radius: 14px;
   padding: 14px 16px;
-  color: var(--text);
+  color: #0f2d3d;
   font-size: 16px;
 }
 
 .geo-map {
   width: 100%;
   height: 320px;
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
 }
 
@@ -152,24 +205,27 @@
 }
 
 .fb-good {
-  color: var(--good);
-  font-weight: 700;
+  color: #16a34a;
+  font-weight: 800;
+  font-size: 18px;
 }
 
 .fb-bad {
-  color: var(--bad);
-  font-weight: 700;
+  color: #dc2626;
+  font-weight: 800;
+  font-size: 18px;
 }
 
 .fb-right {
-  color: var(--text);
-  font-weight: 400;
+  color: #36566a;
+  font-weight: 600;
 }
 
 /* ============================================================
-   Full-screen trivia flow (multiple-choice `question` items).
-   Themed gradient card, white signpost answer buttons, reaction
-   layer, story reveal + vote, segmented progress, score row.
+   Full-screen trivia flow (TriviaCard).
+   Roadio-blue backdrop · compact top bar · question card + answers
+   fitted to one screen (data-fit levels) · reaction overlay that
+   plays to its end · story sheet with a sticky action bar.
    ============================================================ */
 .trivia-overlay {
   position: fixed;
@@ -177,316 +233,841 @@
   z-index: 1000;
 }
 
-.trivia {
+.tq {
+  --ink: #0f2d3d;
+  --ink-soft: #46677a;
+  --line: #e1ecf2;
+  --brand: #1b8fd0;
+  --brand-soft: #e5f4fc;
+  --ok: #22c55e;
+  --ok-ink: #116b34;
+  --ok-soft: #e9f9ef;
+  --no: #ef4444;
+  --no-ink: #9b1c1c;
+  --no-soft: #fdecec;
+
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
-  /* default theme: bright sky-blue gradient (per the quiz screenshots) */
-  background: linear-gradient(180deg, #1b9fe0 0%, #2bb6e8 45%, #6fd0c4 100%);
+  gap: 10px;
+  background:
+    radial-gradient(120% 60% at 100% 0%, rgba(255, 255, 255, 0.22), transparent 60%),
+    radial-gradient(90% 50% at 0% 100%, rgba(111, 208, 196, 0.55), transparent 70%),
+    linear-gradient(170deg, #1590d8 0%, #26aee6 50%, #5cc8cf 100%);
   color: #fff;
-  padding: calc(20px + env(safe-area-inset-top)) 18px
-    calc(14px + env(safe-area-inset-bottom));
+  padding: calc(10px + env(safe-area-inset-top)) 14px
+    calc(12px + env(safe-area-inset-bottom));
   overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.trivia-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 18px;
-  overflow-y: auto;
-  position: relative;
-}
-
-.trivia-title {
-  text-align: center;
-  font-size: 22px;
-  font-weight: 800;
-  margin: 0;
-  flex: 0 0 auto;
-}
-
-.trivia-q {
-  text-align: center;
-  font-size: 24px;
-  line-height: 1.35;
-  font-weight: 800;
-  margin: 0;
-  flex: 0 0 auto;
-}
-
-/* White signpost / arrow answer buttons */
-.signposts {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  flex: 0 0 auto;
-}
-
-.signpost {
-  position: relative;
-  background: #fff;
-  color: #222;
-  border: 0;
-  border-radius: 12px;
-  /* arrow notch on the leading (left) edge */
-  clip-path: polygon(7% 0, 100% 0, 100% 100%, 7% 100%, 0 50%);
-  padding: 20px 22px 20px 34px;
-  font-size: 20px;
-  font-weight: 700;
-  text-align: center;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
-  cursor: pointer;
-}
-
-.signpost-right {
-  background: #7ed321;
-  color: #1c3d00;
-}
-
-.signpost-wrong {
-  background: #ff6b6b;
-  color: #3d0000;
-}
-
-/* Reaction layer (car frames + on-fire banner) */
-.trivia-reaction {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 220px;
-  flex: 0 0 auto;
-}
-
-.reaction-car {
-  width: 200px;
-  max-width: 60%;
-  height: auto;
-  object-fit: contain;
-  animation: car-pop 0.3s ease-out;
-}
-
-@keyframes car-pop {
-  from {
-    transform: scale(0.6);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-.fire-banner {
-  position: absolute;
-  left: 4px;
-  top: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  z-index: 2;
-}
-
-.fire-911 {
-  font-size: 64px;
-  font-weight: 900;
-  color: #fff;
-  -webkit-text-stroke: 3px #111;
-  line-height: 1;
-}
-
-.fire-text {
-  background: #7ed321;
-  color: #fff;
-  -webkit-text-stroke: 1px #111;
-  font-size: 22px;
-  font-weight: 900;
-  padding: 4px 10px;
-  border-radius: 6px;
-}
-
-/* Story reveal */
-.trivia-reveal {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  flex: 0 0 auto;
-}
-
-.reveal-story {
-  font-size: 17px;
-  line-height: 1.5;
-  margin: 0;
-  white-space: pre-line;
-}
-
-/* Answer banner on reveal-only info cards (no signposts to highlight) */
-.reveal-answer {
-  clip-path: none;
-  border-radius: 12px;
-  padding: 16px 18px;
-  text-align: center;
-}
-
-/* End-of-quiz summary */
-.trivia-summary {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 22px;
-  padding: 24px 0;
-}
-
-.summary-title {
-  font-size: 26px;
-  font-weight: 900;
-  margin: 0;
-}
-
-.summary-stats {
-  display: flex;
-  align-items: center;
-  gap: 36px;
+.tq-num {
+  font-variant-numeric: tabular-nums;
   direction: ltr;
 }
 
-/* Single-row: next-btn (right in RTL) + vote group (left in RTL) */
-.reveal-actions {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  direction: rtl;
-  gap: 10px;
-  margin-top: 4px;
-}
-
-.vote-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.vote-q {
-  font-weight: 700;
-  font-size: 15px;
-  direction: rtl;
-}
-
-.vote-btns {
-  display: flex;
-  gap: 2px;
-}
-
-.vote {
-  background: transparent;
-  border: 0;
-  font-size: 26px;
-  cursor: pointer;
-  opacity: 0.7;
-  filter: grayscale(0.4);
-}
-
-.vote-on {
-  opacity: 1;
-  filter: none;
-  transform: scale(1.2);
-}
-
-.next-btn {
-  background: #fff;
-  color: #1b9fe0;
-  border: 0;
-  border-radius: 12px;
-  padding: 14px 48px;
-  font-size: 18px;
-  font-weight: 800;
-  cursor: pointer;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
-}
-
-/* Segmented progress */
-.trivia-progress {
-  display: flex;
-  gap: 6px;
-  padding: 10px 0;
+/* ---------- top bar ---------- */
+.tq-top {
   flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tq-progress {
+  display: flex;
+  gap: 4px;
   direction: ltr;
 }
 
 .seg {
   flex: 1;
-  height: 7px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.55);
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.3);
+  transition: background 0.3s ease;
 }
 
 .seg-active {
-  background: rgba(255, 255, 255, 0.9);
+  background: #fff;
 }
 
 .seg-correct {
-  background: #7ed321;
+  background: #7ee08f;
 }
 
 .seg-wrong {
-  background: #ff6b6b;
+  background: #ff8a8a;
 }
 
-.seg-done {
-  background: #5aa800;
-}
-
-/* Score / Place / Time row */
-.trivia-footer {
+.tq-hud {
   display: flex;
-  align-items: center;
+  gap: 6px;
   justify-content: space-between;
+}
+
+.tq-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.tq-chip-icon {
+  font-size: 13px;
+}
+
+.tq-chip-val {
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.tq-chip-label {
+  opacity: 0.85;
+}
+
+.tq-chip-warn {
+  background: rgba(239, 68, 68, 0.85);
+  border-color: transparent;
+}
+
+/* ---------- question + answers (fitted) ---------- */
+.tq-main {
+  /* density tokens — overwritten per data-fit level below */
+  --q: 22px;
+  --a: 17px;
+  --apad: 13px;
+  --gap: 12px;
+  --cpad: 18px;
+  --media-min: 120px;
+  --badge: 30px;
+
+  position: relative; /* offsetParent for the fit measurement */
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  /* last resort only: the fit loop picks a level where nothing overflows */
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.tq-main[data-fit='1'] {
+  --q: 20px;
+  --a: 16px;
+  --apad: 11px;
+  --gap: 10px;
+  --cpad: 16px;
+  --media-min: 96px;
+  --badge: 28px;
+}
+
+.tq-main[data-fit='2'] {
+  --q: 18px;
+  --a: 15px;
+  --apad: 9px;
+  --gap: 8px;
+  --cpad: 14px;
+  --media-min: 72px;
+  --badge: 26px;
+}
+
+.tq-main[data-fit='3'] {
+  --q: 17px;
+  --a: 14.5px;
+  --apad: 7px;
+  --gap: 7px;
+  --cpad: 12px;
+  --media-min: 56px;
+  --badge: 24px;
+}
+
+.tq-main[data-fit='4'] {
+  --q: 16px;
+  --a: 14px;
+  --apad: 6px;
+  --gap: 6px;
+  --cpad: 10px;
+  --media-min: 0px;
+  --badge: 22px;
+}
+
+.tq-qcard {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: calc(var(--gap) * 0.9);
+  padding: var(--cpad);
+  border-radius: 24px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 10px 30px rgba(4, 40, 70, 0.18);
+  animation: tq-rise 0.35s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+/* No image: the card hugs the question and the card + answers sit centred
+   on screen, instead of a tall, mostly empty white card. */
+.tq-qcard:not(.tq-qcard-media) {
   flex: 0 0 auto;
-  padding-top: 4px;
-  direction: ltr;
+  margin-top: auto;
+  min-height: 132px;
+  padding-block: calc(var(--cpad) * 1.5);
 }
 
-.foot-stat {
-  flex: 1;
+.tq-qcard:not(.tq-qcard-media) ~ .tq-answers {
+  margin-bottom: auto;
+}
+
+.tq-eyebrow {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--brand);
+  background: var(--brand-soft);
+  padding: 4px 10px;
+  border-radius: 999px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tq-retry {
+  color: #b45309;
+}
+
+.tq-eyebrow:has(.tq-retry) {
+  background: #fff4e0;
+}
+
+.tq-question {
+  flex: 0 0 auto;
+  margin: 0;
   text-align: center;
+  font-size: var(--q);
+  line-height: 1.35;
+  font-weight: 800;
+  text-wrap: balance;
 }
 
-.stat-val {
-  font-size: 26px;
+.tq-media {
+  flex: 1 1 0;
+  min-height: var(--media-min);
+  max-height: 38dvh;
+  width: 100%;
+  position: relative;
+}
+
+.tq-main[data-fit='4'] .tq-media {
+  /* most compact: image yields its space to the text entirely if needed */
+  flex-basis: 0;
+}
+
+.tq-media img,
+.tq-media iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border: 0;
+  border-radius: 14px;
+}
+
+.tq-voice {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  border-radius: 999px;
+  padding: 7px 16px;
+  font-size: 14px;
   font-weight: 800;
 }
 
-.stat-label {
-  font-size: 13px;
-  opacity: 0.9;
+.tq-answers {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gap) * 0.75);
 }
 
-.place-badge {
+.tq-answers-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.tq-answers-grid[data-count='3'] {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.tq-ans {
   position: relative;
-  width: 78px;
-  height: 78px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: calc(var(--a) * 2.4 + var(--apad) * 0.6);
+  padding: var(--apad) 12px;
+  border-radius: 18px;
+  background: #fff;
+  color: var(--ink);
+  border: 2px solid transparent;
+  box-shadow: 0 4px 0 rgba(4, 40, 70, 0.14), 0 8px 18px rgba(4, 40, 70, 0.1);
+  font-size: var(--a);
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    background 0.2s ease,
+    opacity 0.2s ease;
+  animation: tq-rise 0.4s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+.tq-ans:nth-child(2) {
+  animation-delay: 0.04s;
+}
+
+.tq-ans:nth-child(3) {
+  animation-delay: 0.08s;
+}
+
+.tq-ans:nth-child(4) {
+  animation-delay: 0.12s;
+}
+
+.tq-ans:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 rgba(4, 40, 70, 0.14), 0 4px 10px rgba(4, 40, 70, 0.1);
+}
+
+.tq-ans:disabled {
+  cursor: default;
+}
+
+.tq-ans-badge {
+  flex: 0 0 auto;
+  width: var(--badge);
+  height: var(--badge);
   border-radius: 50%;
-  background: #1b9fe0;
-  border: 4px solid #fff;
+  display: grid;
+  place-items: center;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: calc(var(--badge) * 0.5);
+  font-weight: 900;
+}
+
+.tq-ans-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.tq-answers-grid .tq-ans {
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+  font-size: calc(var(--a) + 3px);
+}
+
+.tq-answers-grid .tq-ans-badge {
+  display: none;
+}
+
+.tq-answers-intro .tq-ans {
+  justify-content: center;
+  text-align: center;
+  background: #fff;
+  color: var(--brand);
+  font-size: calc(var(--a) + 2px);
+  font-weight: 900;
+}
+
+.tq-ans-right {
+  background: var(--ok);
+  color: #fff;
+  transform: scale(1.02);
+}
+
+.tq-ans-right .tq-ans-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.tq-ans-wrong {
+  background: var(--no);
+  color: #fff;
+  animation: tq-shake 0.45s ease both;
+}
+
+.tq-ans-wrong .tq-ans-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.tq-ans-gone {
+  opacity: 0.45;
+  box-shadow: none;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.tq-ans-gone .tq-ans-text {
+  text-decoration: line-through;
+  text-decoration-color: var(--no);
+}
+
+.tq-ans-gone .tq-ans-badge {
+  background: var(--no-soft);
+  color: var(--no);
+}
+
+/* ---------- reaction overlay ---------- */
+.tq-reaction {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(6, 32, 54, 0.42);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: tq-fade 0.25s ease both;
+}
+
+.tq-reaction-card {
+  position: relative;
+  width: min(320px, 100%);
+  padding: 22px 20px 26px;
+  border-radius: 30px;
+  background: #fff;
+  color: var(--ink);
+  text-align: center;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(4, 30, 50, 0.35);
+  animation: tq-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.tq-reaction-stage {
+  position: relative;
+  height: 190px;
+  margin-bottom: 8px;
+}
+
+.tq-burst {
+  position: absolute;
+  inset: -40px;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(34, 197, 94, 0.14) 0deg 10deg,
+    transparent 10deg 20deg
+  );
+  mask-image: radial-gradient(circle, #000 25%, transparent 65%);
+  -webkit-mask-image: radial-gradient(circle, #000 25%, transparent 65%);
+  animation: tq-spin 9s linear infinite;
+}
+
+.tq-reaction-car {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  max-width: 82%;
+  max-height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  transform: scale(0.85);
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
+
+.tq-reaction-car.tq-on {
+  opacity: 1;
+  transform: none;
+  animation: tq-bounce 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tq-reaction-wrong .tq-reaction-car.tq-on {
+  animation:
+    tq-bounce 0.55s cubic-bezier(0.34, 1.56, 0.64, 1),
+    tq-shake 0.6s ease 0.6s;
+}
+
+.tq-reaction-title {
+  font-size: 26px;
+  font-weight: 900;
+  animation: tq-rise 0.4s 0.15s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+.tq-reaction-correct .tq-reaction-title {
+  color: #16a34a;
+}
+
+.tq-reaction-wrong .tq-reaction-title {
+  color: #dc2626;
+}
+
+.tq-reaction-points {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--ok-soft);
+  color: var(--ok-ink);
+  font-weight: 900;
+  font-size: 16px;
+  animation: tq-rise 0.45s 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.tq-reaction-sub {
+  margin-top: 6px;
+  color: var(--ink-soft);
+  font-size: 15px;
+  font-weight: 700;
+  animation: tq-rise 0.4s 0.3s ease both;
+}
+
+/* shrinking bar = time until the card moves on */
+.tq-reaction-timer {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 5px;
+  transform-origin: right;
+  animation-name: tq-timer;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+
+[dir='ltr'] .tq-reaction-timer {
+  transform-origin: left;
+}
+
+.tq-reaction-correct .tq-reaction-timer {
+  background: var(--ok);
+}
+
+.tq-reaction-wrong .tq-reaction-timer {
+  background: var(--no);
+}
+
+/* ---------- story reveal ---------- */
+.tq-story-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  border-radius: 24px;
+  scrollbar-width: none;
+}
+
+.tq-story {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 18px 22px;
+  border-radius: 24px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 10px 30px rgba(4, 40, 70, 0.18);
+  animation: tq-rise 0.4s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.tq-story-q {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tq-story-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.tq-answer-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--ok-soft);
+  border: 2px solid var(--ok);
+  color: var(--ok-ink);
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.tq-answer-pill-icon {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--ok);
+  color: #fff;
+  font-size: 15px;
+}
+
+.tq-answer-pill-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+.tq-story-text {
+  margin: 0;
+  font-size: 16.5px;
+  line-height: 1.7;
+  color: #23404f;
+  white-space: pre-line;
+}
+
+.tq-story .media-img,
+.tq-story .media-video {
+  border-radius: 16px;
+}
+
+.tq-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: tq-rise 0.4s 0.1s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+.tq-next {
+  order: -1;
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 54px;
+  border-radius: 18px;
+  background: #fff;
+  color: var(--brand);
+  font-size: 19px;
+  font-weight: 900;
+  box-shadow: 0 4px 0 rgba(4, 40, 70, 0.16), 0 10px 22px rgba(4, 40, 70, 0.14);
+  transition: transform 0.12s ease;
+}
+
+.tq-next:active {
+  transform: translateY(3px);
+}
+
+.tq-next-arrow {
+  font-size: 20px;
+}
+
+.tq-vote {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 54px;
+  padding: 0 6px 0 10px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.tq-vote-q {
+  font-size: 14px;
+  font-weight: 800;
+  padding-inline: 4px;
+}
+
+.tq-vote-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 12px;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.tq-vote-btn:disabled {
+  opacity: 0.35;
+}
+
+.tq-vote-on {
+  background: #fff;
+  transform: scale(1.08);
+}
+
+/* ---------- end-of-quiz summary ---------- */
+.tq-summary-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+}
+
+.tq-summary {
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+  gap: 16px;
+  padding: 24px 18px;
+  border-radius: 28px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 16px 40px rgba(4, 40, 70, 0.22);
+  animation: tq-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-.place-val {
-  font-size: 20px;
-  font-weight: 800;
-  z-index: 1;
+.tq-summary-car {
+  width: 150px;
+  height: auto;
 }
 
-.place-label {
-  font-size: 12px;
-  z-index: 1;
+.tq-summary-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 900;
+}
+
+.tq-summary-stats {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+}
+
+.tq-summary-stat {
+  flex: 1;
+  padding: 12px 6px;
+  border-radius: 16px;
+  background: var(--brand-soft);
+  text-align: center;
+}
+
+.tq-summary-val {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--brand);
+}
+
+.tq-summary-label {
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+
+.tq-summary .tq-next {
+  order: 0;
+  flex: 0 0 auto;
+  width: 100%;
+  background: linear-gradient(180deg, #2bb0ee, #1b8fd0);
+  color: #fff;
+}
+
+/* ---------- keyframes ---------- */
+@keyframes tq-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@keyframes tq-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes tq-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+@keyframes tq-bounce {
+  0% {
+    opacity: 0;
+    transform: scale(0.6) translateY(16px);
+  }
+  60% {
+    opacity: 1;
+  }
+}
+
+@keyframes tq-shake {
+  0%,
+  100% {
+    translate: 0;
+  }
+  20% {
+    translate: -8px;
+  }
+  40% {
+    translate: 7px;
+  }
+  60% {
+    translate: -5px;
+  }
+  80% {
+    translate: 3px;
+  }
+}
+
+@keyframes tq-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes tq-timer {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* the countdown bar is kept: it shows when the card moves on */
+  .tq *:not(.tq-reaction-timer) {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

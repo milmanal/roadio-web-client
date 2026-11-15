@@ -14,6 +14,8 @@ if (import.meta.env.DEV) {
   const w = window as any
   w.__session = useSession
   w.__useMarkers = useMarkers
+  // Lets scripts inject cards (e.g. long-text trivia) when testing card UI.
+  void import('./store/driving').then((m) => (w.__driving = m.useDriving))
 }
 
 createRoot(document.getElementById('root')!).render(
