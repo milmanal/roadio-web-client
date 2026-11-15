@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useDriving } from '../../../store/driving'
 import { useSession } from '../../../store/session'
-import { reportEvents, fetchItems, NEXT_EVENT } from '../../../api/endpoints'
+import { reportEvents, NEXT_EVENT } from '../../../api/endpoints'
 import { APP_VERSION } from '../../../config'
 import type { RoadPoint } from '../../../types'
 
@@ -107,24 +107,9 @@ export default function QuestItemFrame({ point }: Props) {
       } catch {
         // advance locally regardless
       }
+      // Closing the card makes the driving loop fetch /v2/items right away
+      // (useDrivingLoop), which picks up the next station / next scene.
       dismissActive()
-      // Immediately refresh config so quest.user_next_station (and the station
-      // label) updates without waiting up to 10s for the next driving-loop tick.
-      // Any items this returns (the next scene / between-station clip) are
-      // queued right away too, instead of waiting for the next poll.
-      try {
-        const res = await fetchItems({
-          user_id: userId,
-          lat: latlng.lat,
-          lng: latlng.lng,
-          isDriving: true,
-        })
-        const driving = useDriving.getState()
-        if (res.configuration) driving.setConfig(res.configuration)
-        if (res.items?.length) driving.triggerItems(res.items)
-      } catch {
-        // non-fatal — driving loop will catch it on next tick
-      }
     }
 
     async function handleEvent(evType: string, params: URLSearchParams) {

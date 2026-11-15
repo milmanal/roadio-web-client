@@ -32,8 +32,15 @@ export function useDrivingLoop(active: boolean) {
     const driving = useDriving.getState
     const session = useSession.getState
 
-    async function doFetch() {
-      if (inFlight.current) return
+    // A forced fetch requested while one is in flight runs right after it, so
+    // the post-card refresh is never swallowed by the in-flight guard.
+    let pendingForce = false
+
+    async function doFetch(force = false) {
+      if (inFlight.current) {
+        if (force) pendingForce = true
+        return
+      }
       const pos = driving().position
       if (!pos) return
       inFlight.current = true
@@ -70,6 +77,10 @@ export function useDrivingLoop(active: boolean) {
         // Transient network/backend error: keep driving, retry next tick.
       } finally {
         inFlight.current = false
+        if (pendingForce) {
+          pendingForce = false
+          void doFetch(true)
+        }
       }
     }
 
@@ -92,6 +103,16 @@ export function useDrivingLoop(active: boolean) {
     // React to new fixes (gated) + a steady poll tick as a fallback.
     const unsub = useDriving.subscribe((s, prev) => {
       if (s.position !== prev.position && shouldFetch()) void doFetch()
+      // Road quest: a card just closed (scene, puzzle, audio clip, trivia).
+      // If it was the station's last item, the server switches to the next
+      // station on this call — fetch now so the map shows the new station
+      // right away instead of after the next poll tick (up to 8s). It also
+      // queues the next scene immediately. This is the single place that does
+      // it, so two concurrent /v2/items calls never both start the station
+      // calculation.
+      if (prev.activeCard && !s.activeCard && s.config?.is_road_quest) {
+        void doFetch(true)
+      }
     })
     const pollMs = Math.max(
       MIN_POLL_MS,
