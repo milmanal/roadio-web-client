@@ -1,4 +1,4 @@
-import { isImageUrl, youTubeEmbed, youTubeId } from '../../lib/media'
+import { fixImageUrl, isImageUrl, youTubeEmbed, youTubeId } from '../../lib/media'
 
 /** Renders a list of media URLs (images, YouTube links) + an optional audio. */
 export function MediaBlock({
@@ -26,7 +26,16 @@ export function MediaBlock({
           )
         }
         if (isImageUrl(url) || /^https?:\/\//.test(url)) {
-          return <img key={i} className="media-img" src={url} alt="" />
+          return (
+            <img
+              key={i}
+              className="media-img"
+              src={fixImageUrl(url)}
+              alt=""
+              // A dead link shouldn't leave an empty box behind.
+              onError={(e) => (e.currentTarget.style.display = 'none')}
+            />
+          )
         }
         return null
       })}

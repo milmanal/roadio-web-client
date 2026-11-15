@@ -6,7 +6,7 @@ import { isCorrect, isScored, normalize } from '../answer'
 import { MediaBlock } from '../MediaBlock'
 import { t } from '../../../lib/i18n'
 import { Sounds } from '../../../lib/sounds'
-import { isImageUrl, youTubeEmbed, youTubeId } from '../../../lib/media'
+import { fixImageUrl, isImageUrl, youTubeEmbed, youTubeId } from '../../../lib/media'
 import type { RoadPoint } from '../../../types'
 
 // Reaction storyboards. Each pose is held long enough to be read (the old
@@ -75,12 +75,17 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
   const rightAnswer = point.right_answer?.trim() ?? null
   const choices = (point.answers ?? []).filter(Boolean)
   const maxAttempts = point.points_second_correct != null ? 2 : 1
-  // No-choice quiz items (html/story/info) are reveal-only: skip straight to
-  // the story/answer reveal — no guessing, no reaction.
-  const revealOnly = choices.length === 0
+  // Open-text question: a scored item the player answers by typing. Quiz
+  // "html" items carry these with no choices (e.g. "biggest animal?") or with
+  // the answer as their only choice (fill-in-the-blank "___").
+  const openText =
+    scored && (choices.length === 0 || (choices.length === 1 && point.type === 'html'))
+  // Unscored no-choice quiz items (html/story/info) are reveal-only: skip
+  // straight to the story reveal — no guessing, no reaction.
+  const revealOnly = choices.length === 0 && !openText
   // A single-choice item is an intro/outro CTA (e.g. "ready?" / "see you!") —
   // no reaction, no story reveal, just acknowledge and advance.
-  const isIntro = choices.length === 1
+  const isIntro = choices.length === 1 && !openText
   const isQuiz = point.quiz_name != null || point.is_quiz === true
   const isLastQuizCard = isQuiz && queueLen === 0
   // Short answers (numbers, single words) sit side by side in a grid.
@@ -90,11 +95,14 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
   const [phase, setPhase] = useState<Phase>(revealOnly ? 'revealed' : 'asking')
   const [eliminated, setEliminated] = useState<string[]>([])
   const [picked, setPicked] = useState<string | null>(null)
+  const [typed, setTyped] = useState('')
   const [attempts, setAttempts] = useState(0)
   const [reaction, setReaction] = useState<'correct' | 'wrong'>('correct')
   const [step, setStep] = useState(0)
   const [voted, setVoted] = useState<'up' | 'down' | null>(null)
   const [earned, setEarned] = useState<number | null>(null)
+  // Question image that failed to load: drop the box so text and answers get the room.
+  const [mediaFailed, setMediaFailed] = useState(false)
 
   useEffect(preloadReactions, [])
 
@@ -166,7 +174,7 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
   }, [])
   useLayoutEffect(() => {
     refit()
-  }, [refit, phase, eliminated, point.id])
+  }, [refit, phase, eliminated, point.id, mediaFailed])
   useEffect(() => {
     const el = fitRef.current
     if (!el || typeof ResizeObserver === 'undefined') return
@@ -211,7 +219,11 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
 
   function onPick(choice: string, at: number) {
     if (phase !== 'asking') return
-    const right = scored ? isCorrect(point, choice) : true
+    const right = !scored
+      ? true
+      : openText
+        ? openTextCorrect(point, choice)
+        : isCorrect(point, choice)
     report({ answer: choice })
     // Intro/outro CTA: acknowledge and move on, no reaction/story.
     if (isIntro) {
@@ -231,6 +243,7 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
       const nextAttempts = attempts + 1
       setAttempts(nextAttempts)
       setEliminated((e) => [...e, choice])
+      setTyped('')
       if (nextAttempts < maxAttempts) setRetry(true)
       else setResult(point.id, false)
       startReaction('wrong', at)
@@ -273,8 +286,9 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
   const ed = point.extra_details ?? {}
   const chartLabel = ((ed[locale] ?? ed.he ?? ed.en) as { chart?: string } | undefined)?.chart
   const eyebrow = point.quiz_name ?? chartLabel ?? null
-  const questionMedia = firstMedia(point.question_images)
+  const questionMedia = mediaFailed ? null : firstMedia(point.question_images)
   const isRetry = phase === 'asking' && attempts > 0
+  const acceptedList = Array.isArray(point.multiple_right_answers) ? point.multiple_right_answers : []
 
   return (
     <div className="trivia-overlay">
@@ -340,7 +354,12 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
                       allowFullScreen
                     />
                   ) : (
-                    <img src={questionMedia.url} alt="" onLoad={refit} />
+                    <img
+                      src={questionMedia.url}
+                      alt=""
+                      onLoad={refit}
+                      onError={() => setMediaFailed(true)}
+                    />
                   )}
                 </div>
               )}
@@ -349,7 +368,49 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
               )}
             </section>
 
-            {choices.length > 0 && (
+            {openText && (
+              <form
+                className={`tq-open ${phase === 'reacting' ? (reaction === 'correct' ? 'tq-open-right' : 'tq-open-wrong') : ''}`}
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  const v = typed.trim()
+                  if (v) onPick(v, e.timeStamp)
+                }}
+              >
+                {eliminated.length > 0 && (
+                  <div className="tq-open-tried">
+                    {eliminated.map((v) => (
+                      <span key={v} className="tq-open-chip">
+                        ✗ {v}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="tq-open-row">
+                  <input
+                    className="tq-open-input"
+                    value={phase === 'reacting' ? (picked ?? typed) : typed}
+                    onChange={(e) => setTyped(e.target.value)}
+                    placeholder={t('triviaTypeAnswer', locale)}
+                    disabled={phase !== 'asking'}
+                    enterKeyHint="send"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    dir={locale === 'he' ? 'rtl' : 'ltr'}
+                  />
+                  <button
+                    type="submit"
+                    className="tq-open-submit"
+                    disabled={phase !== 'asking' || !typed.trim()}
+                  >
+                    {t('triviaCheck', locale)}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {choices.length > 0 && !openText && (
               <div
                 className={`tq-answers ${compactChoices ? 'tq-answers-grid' : ''} ${isIntro ? 'tq-answers-intro' : ''}`}
                 data-count={choices.length}
@@ -389,6 +450,15 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
               <article className="tq-story">
                 {point.question && !revealOnly && (
                   <p className="tq-story-q">{point.question}</p>
+                )}
+                {!rightAnswer && openText && acceptedList.length > 0 && (
+                  <div className="tq-answer-pill">
+                    <span className="tq-answer-pill-icon" aria-hidden>✓</span>
+                    <span>
+                      <span className="tq-answer-pill-label">{t('triviaAnswer', locale)}</span>
+                      {acceptedList.join(', ')}
+                    </span>
+                  </div>
                 )}
                 {rightAnswer && (
                   <div className={`tq-answer-pill ${resolvedWrong ? 'tq-answer-pill-missed' : ''}`}>
@@ -517,7 +587,7 @@ function firstMedia(urls?: (string | null)[] | null): Media | null {
     if (!url) continue
     const yt = youTubeId(url)
     if (yt) return { kind: 'yt', id: yt }
-    if (isImageUrl(url) || /^https?:\/\//.test(url)) return { kind: 'img', url }
+    if (isImageUrl(url) || /^https?:\/\//.test(url)) return { kind: 'img', url: fixImageUrl(url) }
   }
   return null
 }
@@ -549,4 +619,25 @@ function VoiceButton({ src, label }: { src: string; label: string }) {
       />
     </>
   )
+}
+
+// Typed answers are matched loosely: case, spaces, punctuation and Hebrew
+// plene spelling (וו/ו, יי/י) don't count, so "לויתן כחול" = "לוויתן כחול".
+function loose(v: unknown): string {
+  return normalize(v)
+    .replace(/[\u0591-\u05C7]/g, '') // niqqud / cantillation
+    .replace(/[^\p{L}\p{N}]/gu, '')
+    .replace(/וו/g, 'ו')
+    .replace(/יי/g, 'י')
+}
+
+function openTextCorrect(point: RoadPoint, answer: string): boolean {
+  const a = loose(answer)
+  if (!a) return false
+  const accepted = [
+    ...(Array.isArray(point.multiple_right_answers) ? point.multiple_right_answers : []),
+    point.right_answer,
+    ...(point.answers ?? []),
+  ].filter((r): r is string => typeof r === 'string' && r.trim() !== '')
+  return accepted.some((r) => loose(r) === a)
 }

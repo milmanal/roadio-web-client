@@ -426,7 +426,8 @@
   padding-block: calc(var(--cpad) * 1.5);
 }
 
-.tq-qcard:not(.tq-qcard-media) ~ .tq-answers {
+.tq-qcard:not(.tq-qcard-media) ~ .tq-answers,
+.tq-qcard:not(.tq-qcard-media) ~ .tq-open {
   margin-bottom: auto;
 }
 
@@ -639,6 +640,92 @@
 .tq-ans-gone .tq-ans-badge {
   background: var(--no-soft);
   color: var(--no);
+}
+
+/* ---------- open-text answer ---------- */
+.tq-open {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gap) * 0.75);
+  animation: tq-rise 0.4s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+.tq-open-row {
+  display: flex;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 20px;
+  background: #fff;
+  border: 2px solid transparent;
+  box-shadow: 0 4px 0 rgba(4, 40, 70, 0.14), 0 8px 18px rgba(4, 40, 70, 0.1);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.tq-open-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  /* 16px+ keeps iOS from zooming into the field */
+  font-size: max(16px, var(--a));
+  font-weight: 700;
+  padding: 10px 10px;
+}
+
+.tq-open-input::placeholder {
+  color: #9bb0bd;
+  font-weight: 600;
+}
+
+.tq-open-row:focus-within {
+  border-color: #8fd3f5;
+}
+
+.tq-open-submit {
+  flex: 0 0 auto;
+  border-radius: 14px;
+  padding: 0 20px;
+  min-height: 46px;
+  background: linear-gradient(180deg, #2bb0ee, #1b8fd0);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.tq-open-submit:disabled {
+  background: #d9e8f0;
+  color: #8aa3b2;
+}
+
+.tq-open-right .tq-open-row {
+  border-color: var(--ok);
+  background: var(--ok-soft);
+}
+
+.tq-open-wrong .tq-open-row {
+  border-color: var(--no);
+  background: var(--no-soft);
+  animation: tq-shake 0.45s ease both;
+}
+
+.tq-open-tried {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tq-open-chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--no-ink);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: line-through;
+  text-decoration-color: var(--no);
 }
 
 /* ---------- reaction overlay ---------- */
