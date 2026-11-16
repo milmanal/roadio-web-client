@@ -10,7 +10,7 @@ import { useGeolocation } from '../driving/useGeolocation'
 import { useDrivingLoop } from '../driving/useDrivingLoop'
 import { useGeofence } from '../geofence/useGeofence'
 import { useMapMarkers } from './useMapMarkers'
-import { useProximity } from './useProximity'
+import { useProximity, TRIGGER_RADIUS_M } from './useProximity'
 import { useQuestMusic } from './useQuestMusic'
 import { useSimDrive, SIM_ROUTES } from './useSimDrive'
 import { useQuestTestDrive, startFreshBabelUser, skipCurrentClip } from '../dev/questTest'
@@ -43,6 +43,49 @@ const GROUP_ICON: [keyof MapMarkersResponse, string, string][] = [
 ]
 
 type MarkerFC = GeoJSON.FeatureCollection<GeoJSON.Point>
+
+// ---- camera ----
+const DEFAULT_ZOOM = 15
+const MIN_ZOOM = 12
+const MAX_ZOOM = 15.5
+/** Tilt while driving, so more of the road ahead fits at the same zoom. */
+const DRIVE_PITCH = 35
+/** While driving the puck sits below centre: this share of the screen height
+ *  is given to the road ahead. */
+const DRIVE_TOP_SHARE = 0.28
+/** Pins farther than this don't pull the zoom out. */
+const ZOOM_REACH_M = 5000
+
+/**
+ * Zoom at which a point `meters` away sits `pixels` from the puck. Mapbox GL
+ * uses 512px tiles: 78271.5 m/px at zoom 0 on the equator.
+ */
+function zoomToFit(meters: number, pixels: number, lat: number): number {
+  const metersPerPixel = Math.max(meters, 1) / pixels
+  return Math.log2((78271.5 * Math.cos((lat * Math.PI) / 180)) / metersPerPixel)
+}
+
+/** Ground circle (true meters) around a position, as a polygon ring. */
+function radiusRing(lng: number, lat: number, meters: number): GeoJSON.Feature<GeoJSON.Polygon> {
+  const dLat = meters / 111320
+  const dLng = dLat / Math.cos((lat * Math.PI) / 180)
+  const ring: [number, number][] = []
+  for (let i = 0; i <= 64; i++) {
+    const a = (i / 64) * 2 * Math.PI
+    ring.push([lng + dLng * Math.cos(a), lat + dLat * Math.sin(a)])
+  }
+  return { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } }
+}
+
+const EMPTY_FC: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
+
+// Navigation puck: a small dot with a heading arrow that shows while moving.
+const PUCK_HTML =
+  '<span class="mk-user-pulse"></span>' +
+  '<span class="mk-user-dot">' +
+  '<svg class="mk-user-arrow" viewBox="0 0 24 24" aria-hidden="true">' +
+  '<path d="M12 3.5 19 19.5 12 15.8 5 19.5Z" fill="#fff" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>' +
+  '</svg></span>'
 
 function isQuestConfig(c: Configuration | null | undefined): boolean {
   return !!(c?.is_quest || c?.is_road_quest)
@@ -267,7 +310,7 @@ export default function MapScreen() {
       container: containerRef.current,
       style: MAP_STYLE,
       center: position ? [position.lng, position.lat] : [34.78, 32.08],
-      zoom: 15,
+      zoom: DEFAULT_ZOOM,
       attributionControl: false,
     })
     // User pans → stop following. After 5s idle → auto-recenter & resume.
@@ -279,7 +322,7 @@ export default function MapScreen() {
       if (recenterTimer.current) window.clearTimeout(recenterTimer.current)
       recenterTimer.current = window.setTimeout(() => {
         const p = useDriving.getState().position
-        if (p) map.easeTo({ center: [p.lng, p.lat], zoom: 15, duration: 600 })
+        if (p) map.easeTo({ center: [p.lng, p.lat], duration: 600 })
         setFollowing(true)
       }, 5000)
     })
@@ -299,6 +342,32 @@ export default function MapScreen() {
             }),
         ),
       )
+      // The game pins are the content here: drop the stock shop / hotel /
+      // transit labels that compete with them.
+      for (const id of ['poi-label', 'transit-label']) {
+        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none')
+      }
+      // Trigger radius on the ground in real meters (so it scales with zoom
+      // and tilts with the map), drawn under the pins.
+      if (!map.getSource('user-radius')) {
+        const p = useDriving.getState().position
+        map.addSource('user-radius', {
+          type: 'geojson',
+          data: p ? radiusRing(p.lng, p.lat, TRIGGER_RADIUS_M) : EMPTY_FC,
+        })
+        map.addLayer({
+          id: 'user-radius-fill',
+          type: 'fill',
+          source: 'user-radius',
+          paint: { 'fill-color': '#36c0f6', 'fill-opacity': 0.14 },
+        })
+        map.addLayer({
+          id: 'user-radius-line',
+          type: 'line',
+          source: 'user-radius',
+          paint: { 'line-color': '#36c0f6', 'line-opacity': 0.6, 'line-width': 1.5 },
+        })
+      }
       if (!map.getSource('markers')) {
         map.addSource('markers', {
           type: 'geojson',
@@ -392,8 +461,9 @@ export default function MapScreen() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Follow user + rotate to heading in ONE easeTo call so they don't cancel each other.
-  // Two separate easeTo calls on the same tick = the second cancels the first → car drifts off screen.
+  // Follow the user: centre, heading, tilt and zoom go out in ONE easeTo call.
+  // Separate easeTo calls on the same tick cancel each other (the later one
+  // wins), which used to drop the follow whenever the zoom changed.
   useEffect(() => {
     const map = mapRef.current
     if (!map || !position) return
@@ -403,67 +473,60 @@ export default function MapScreen() {
     const moving = (speed ?? 0) > 1
     const stopped = (speed ?? 0) < 0.5
 
-    // Create marker on first fix; CSS transition on the element handles smooth
-    // repositioning between ticks (Mapbox sets transform internally).
+    // Create the puck on first fix. The MAP rotates to the heading, so the
+    // puck's arrow always points up the screen and never rotates itself.
     if (!userCarRef.current) {
       const el = document.createElement('div')
       el.className = 'mk-user'
-      // Inner wrapper handles rotation with CSS transition; outer el is
-      // translated by Mapbox (no transition there — avoids lag during easeTo).
-      el.innerHTML =
-        '<div class="mk-user-inner"><span class="mk-user-radius"></span><img class="mk-user-van" src="/car.png" alt="" /></div>'
+      el.innerHTML = PUCK_HTML
       userCarRef.current = new mapboxgl.Marker({ element: el, anchor: 'center' })
         .setLngLat(ll)
         .addTo(map)
     } else {
       userCarRef.current.setLngLat(ll)
     }
+    userCarRef.current.getElement().classList.toggle('is-moving', moving && heading != null)
+    const radiusSrc = map.getSource('user-radius') as mapboxgl.GeoJSONSource | undefined
+    radiusSrc?.setData(radiusRing(position.lng, position.lat, TRIGGER_RADIUS_M))
 
     if (!didCenter.current) {
-      map.jumpTo({ center: ll, zoom: 15, bearing: 0 })
+      map.jumpTo({ center: ll, zoom: DEFAULT_ZOOM, bearing: 0 })
       didCenter.current = true
       return
     }
 
-    // Single easeTo: center + bearing in one call.
-    // The MAP rotates to heading — the car icon must NOT also rotate or it
-    // double-rotates and leans. Icon always points "up" on screen.
     const opts: Parameters<mapboxgl.Map['easeTo']>[0] = { duration: 500 }
-    if (following) opts.center = ll
     if (heading != null && moving) opts.bearing = heading
     else if (stopped) opts.bearing = 0
 
-    if (opts.center || opts.bearing != null) map.easeTo(opts)
-  }, [position, following])
+    if (following) {
+      opts.center = ll
+      // Driving: tilt the map and drop the puck toward the bottom, so the
+      // screen is spent on the road ahead. Parked: flat, north-up, centred.
+      const canvas = map.getCanvas()
+      const w = canvas.clientWidth
+      const h = canvas.clientHeight
+      opts.pitch = moving ? DRIVE_PITCH : 0
+      opts.padding = { top: moving ? h * DRIVE_TOP_SHARE : 0, bottom: 0, left: 0, right: 0 }
 
-  // Auto-zoom so the nearest item stays visible. Uses cameraForBounds to
-  // compute the zoom needed to show both user and nearest pin, then easeTo
-  // just the zoom (no pan — user stays centered). Capped at 5km radius.
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map || !position || !following || !layersReady) return
-    const candidates = [
-      ...markersStore.items,
-      ...markersStore.missions,
-      ...markersStore.openMissions,
-    ]
-    if (!candidates.length) return
-    let nearest: MapMarker | null = null
-    let minDist = Infinity
-    for (const m of candidates) {
-      const d = distanceMeters(position.lat, position.lng, Number(m.lat), Number(m.lng))
-      if (d < minDist) { minDist = d; nearest = m }
+      // Zoom so the nearest unplayed pin is on screen, and back in as it gets
+      // close: no closer than street level, no farther out than a few km.
+      const { items, missions, openMissions } = useMarkers.getState()
+      let nearest = Infinity
+      for (const m of [...items, ...missions, ...openMissions]) {
+        const d = distanceMeters(position.lat, position.lng, Number(m.lat), Number(m.lng))
+        if (d < nearest) nearest = d
+      }
+      const target =
+        nearest <= ZOOM_REACH_M
+          ? Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoomToFit(nearest, Math.min(w, h) * 0.36, position.lat)))
+          : DEFAULT_ZOOM
+      // Ignore small differences so the zoom doesn't breathe on every tick.
+      if (Math.abs(target - map.getZoom()) > 0.2) opts.zoom = target
     }
-    if (!nearest || minDist > 5000) return
-    const bounds: [[number, number], [number, number]] = [
-      [position.lng, position.lat],
-      [Number(nearest.lng), Number(nearest.lat)],
-    ]
-    const cam = map.cameraForBounds(bounds, { padding: 80 })
-    if (cam && cam.zoom != null && cam.zoom < 14.5) {
-      map.easeTo({ zoom: cam.zoom - 0.3, duration: 800 })
-    }
-  }, [position, markersStore.items, markersStore.missions, markersStore.openMissions, following, layersReady]) // eslint-disable-line react-hooks/exhaustive-deps
+
+    if (opts.center || opts.bearing != null) map.easeTo(opts)
+  }, [position, following, layersReady, markersStore.items, markersStore.missions, markersStore.openMissions])
 
   // Push marker data into the GL source whenever markers OR the server icon
   // config change (GPU-rendered symbol/circle layers — no DOM markers, so
@@ -574,7 +637,7 @@ export default function MapScreen() {
             setFollowing(true)
             const p = useDriving.getState().position
             if (p && mapRef.current)
-              mapRef.current.easeTo({ center: [p.lng, p.lat], zoom: 15 })
+              mapRef.current.easeTo({ center: [p.lng, p.lat] })
           }}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

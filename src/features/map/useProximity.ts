@@ -12,7 +12,7 @@ import { useMarkers } from '../../store/markers'
 import { fetchItems } from '../../api/endpoints'
 import { distanceMeters } from '../../lib/geo'
 
-const TRIGGER_RADIUS_M = 100
+export const TRIGGER_RADIUS_M = 100
 const CHECK_MS = 3000
 
 export function useProximity(active: boolean) {
