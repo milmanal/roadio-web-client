@@ -79,7 +79,9 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
   // "html" items carry these with no choices (e.g. "biggest animal?") or with
   // the answer as their only choice (fill-in-the-blank "___").
   const openText =
-    scored && (choices.length === 0 || (choices.length === 1 && point.type === 'html'))
+    scored &&
+    !!point.question?.trim() &&
+    (choices.length === 0 || (choices.length === 1 && point.type === 'html'))
   // Unscored no-choice quiz items (html/story/info) are reveal-only: skip
   // straight to the story reveal — no guessing, no reaction.
   const revealOnly = choices.length === 0 && !openText

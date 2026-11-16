@@ -2,7 +2,7 @@ import { Suspense, lazy, useState } from 'react'
 import { useDriving } from '../../store/driving'
 import { useSession } from '../../store/session'
 import { reportAnswer, reportEvents, NEXT_EVENT } from '../../api/endpoints'
-import { isCorrect, isScored } from './answer'
+import { isBlankAck, isCorrect, isScored } from './answer'
 import type { CardProps, CardResult } from './cardProps'
 import type { RoadPoint, RoadPointType } from '../../types'
 import TriviaCard from './cards/TriviaCard'
@@ -13,6 +13,7 @@ import WebGameCard from './cards/WebGameCard'
 import FallbackCard from './cards/FallbackCard'
 import QuestItemFrame from './cards/QuestItemFrame'
 import AudioItem from './cards/AudioItem'
+import AutoAck from './cards/AutoAck'
 // GeoGuessCard pulls in mapbox-gl — load it only when a geoguess card shows.
 const GeoGuessCard = lazy(() => import('./cards/GeoGuessCard'))
 import './games.css'
@@ -143,6 +144,11 @@ export default function GameCard() {
   }
 
   const kind = cardKind(point)
+
+  // Empty quiz follow-up item: acknowledge silently, never show a blank card.
+  if (kind !== 'frame' && kind !== 'audio' && isBlankAck(point)) {
+    return <AutoAck key={point.id} point={point} />
+  }
 
   // Quest/Babylon special items: render the backend's own item HTML full-screen
   // (it owns its UI + scoring via the hash bridge). Must take priority over the

@@ -29,3 +29,21 @@ export function isCorrect(point: RoadPoint, answer: unknown): boolean {
   }
   return false
 }
+
+/**
+ * Empty follow-up "ack" item the backend appends to a quiz (no question, no
+ * story, no media, answers like ["1"]). It gets a fresh synthetic id on every
+ * /v2/items response, so it must be acknowledged, never shown: showing it
+ * leaves the quiz unfinished and it pops up again on the next fetch.
+ */
+export function isBlankAck(point: RoadPoint): boolean {
+  const blank =
+    !point.question?.trim() &&
+    !point.story?.trim() &&
+    !(point.question_images ?? []).some(Boolean) &&
+    !(point.story_images ?? []).some(Boolean) &&
+    !(point.story_voices ?? []).some(Boolean) &&
+    !point.question_voice &&
+    !point.html_template_name
+  return blank && (point.answers ?? []).filter(Boolean).length <= 1
+}
