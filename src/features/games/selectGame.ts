@@ -7,7 +7,7 @@
 // Unlike playQuiz, this does NOT trigger cards — it only establishes the active
 // game; the map's driving loop + proximity surface road points as you drive.
 
-import { fetchItems, leaveGame } from '../../api/endpoints'
+import { fetchItems, leaveGame, stopQuiz } from '../../api/endpoints'
 import { useSession } from '../../store/session'
 import { useDriving } from '../../store/driving'
 import { Sounds } from '../../lib/sounds'
@@ -26,6 +26,14 @@ export async function selectGame(quiz: string): Promise<boolean> {
   if (cfg?.is_road_quest || cfg?.is_quest) {
     await leaveGame(session.userId).catch(() => {})
   }
+
+  // Leave any quiz still running server-side (e.g. a daily quiz left half
+  // way): otherwise its items keep coming back on every fetch of the new game.
+  await stopQuiz({
+    user_id: session.userId,
+    lat: pos ? String(pos.lat) : null,
+    lng: pos ? String(pos.lng) : null,
+  }).catch(() => {})
 
   const res = await fetchItems({
     user_id: session.userId,

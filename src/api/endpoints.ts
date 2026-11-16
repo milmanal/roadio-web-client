@@ -27,6 +27,21 @@ import type {
 /** "next_event" — sent as an event's answer to advance/dismiss a card. */
 export const NEXT_EVENT = 'next_event'
 
+/**
+ * Tell the server the user left any running quiz. A quiz the user doesn't
+ * finish stays an "active batch" server-side, and every /v2/items call
+ * re-sends its items (with a fresh summary item id each time) until a stop
+ * event, the quiz's last item, or 10 idle minutes. A stop event for any item
+ * id removes all batches; "0" is used since no specific item is meant.
+ */
+export function stopQuiz(req: {
+  user_id: string
+  lat?: string | null
+  lng?: string | null
+}): Promise<EventsResponse> {
+  return reportEvents({ ...req, events: { '0': { event: 'stop' } } })
+}
+
 export function getUserConfig(params: {
   userId: string
   locale?: string

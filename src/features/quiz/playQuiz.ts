@@ -48,6 +48,11 @@ export async function playQuiz({ quizId, quizName }: PlayQuizArgs): Promise<numb
     return !(blank && ackOnly)
   })
   driving.setItems(items)
+  // The driving loop drops quiz items for quizzes the user didn't start here.
+  driving.markQuizzesStarted([
+    ...(quizName ? [quizName] : []),
+    ...items.map((it) => it.quiz_name ?? '').filter(Boolean),
+  ])
 
   session.setHud({
     score: String(res.score ?? '0'),

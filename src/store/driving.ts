@@ -27,6 +27,8 @@ interface DrivingState {
   results: Record<number, boolean>
   /** Epoch ms until which queued cards are held back (not shown). */
   holdCardsUntil: number
+  /** Quiz names the user started in this session (daily / geofence quiz). */
+  startedQuizzes: Set<string>
 
   setActive: (active: boolean) => void
   setPosition: (p: Position) => void
@@ -46,6 +48,8 @@ interface DrivingState {
   clearCards: () => void
   /** Cancel the post-quest card hold (the user started something on purpose). */
   releaseCardHold: () => void
+  /** Remember that the user started these quizzes (see startedQuizzes). */
+  markQuizzesStarted: (names: string[]) => void
   reset: () => void
 }
 
@@ -58,6 +62,7 @@ export const useDriving = create<DrivingState>((set, get) => ({
   config: null,
   items: [],
   seenItemIds: new Set(),
+  startedQuizzes: new Set(),
   queue: [],
   activeCard: null,
   results: {},
@@ -119,6 +124,12 @@ export const useDriving = create<DrivingState>((set, get) => ({
 
   clearCards: () => set({ queue: [], activeCard: null }),
 
+  markQuizzesStarted: (names) => {
+    const fresh = names.filter((n) => n && !get().startedQuizzes.has(n))
+    if (fresh.length === 0) return
+    set({ startedQuizzes: new Set([...get().startedQuizzes, ...fresh]) })
+  },
+
   releaseCardHold: () => {
     if (get().holdCardsUntil === 0) return
     set({ holdCardsUntil: 0 })
@@ -130,6 +141,7 @@ export const useDriving = create<DrivingState>((set, get) => ({
       active: false,
       items: [],
       seenItemIds: new Set(),
+      startedQuizzes: new Set(),
       queue: [],
       activeCard: null,
       results: {},

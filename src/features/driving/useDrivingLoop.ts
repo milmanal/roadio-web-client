@@ -9,18 +9,26 @@
 import { useEffect, useRef } from 'react'
 import { useDriving } from '../../store/driving'
 import { useSession } from '../../store/session'
-import { fetchItems } from '../../api/endpoints'
+import { fetchItems, stopQuiz } from '../../api/endpoints'
 import { distanceMeters } from '../../lib/geo'
 import type { Position } from '../../store/driving'
+import type { RoadPoint } from '../../types'
 
 const DEFAULT_UPDATE_MS = 8000
 const DEFAULT_UPDATE_METERS = 50
 const MIN_POLL_MS = 4000
+// At most one stop event per this interval while a stray quiz is cleared.
+const STRAY_QUIZ_STOP_MS = 15_000
+
+function isQuizItem(p: RoadPoint): boolean {
+  return p.is_quiz === true && p.is_quest !== true
+}
 
 export function useDrivingLoop(active: boolean) {
   const lastFetchPos = useRef<Position | null>(null)
   const lastFetchAt = useRef(0)
   const inFlight = useRef(false)
+  const lastStrayStop = useRef(0)
 
   useEffect(() => {
     if (!active) {
@@ -67,8 +75,31 @@ export function useDrivingLoop(active: boolean) {
           gameName: res.configuration?.game_name ?? null,
         })
         if (res.configuration) driving().setConfig(res.configuration)
-        const items = res.items ?? []
-        driving().setItems(items)
+
+        // Quiz items in a driving fetch come from a quiz batch that is still
+        // open server-side. Ones from a quiz the user started here are already
+        // queued by playQuiz. Ones from any other quiz (left half way, e.g.
+        // before a reload) would pop up forever, with a new summary id each
+        // time: close that quiz on the server and don't show them.
+        const all = res.items ?? []
+        const started = driving().startedQuizzes
+        const stray = all.filter(
+          (p) => isQuizItem(p) && !started.has(p.quiz_name ?? ''),
+        )
+        if (stray.length && Date.now() - lastStrayStop.current > STRAY_QUIZ_STOP_MS) {
+          lastStrayStop.current = Date.now()
+          void stopQuiz({
+            user_id: session().userId,
+            lat: String(pos.lat),
+            lng: String(pos.lng),
+          }).catch(() => {})
+        }
+        const items = all.filter((p) => !isQuizItem(p))
+        // Keep a running quiz's item list (its progress bar) intact.
+        const s = driving()
+        const quizOnScreen =
+          (s.activeCard && isQuizItem(s.activeCard)) || s.queue.some(isQuizItem)
+        if (!quizOnScreen) driving().setItems(items)
 
         // The backend already proximity-filters items for the posted position,
         // so trigger everything it returned (the store dedups by id).
