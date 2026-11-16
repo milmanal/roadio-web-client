@@ -48,11 +48,6 @@ type MarkerFC = GeoJSON.FeatureCollection<GeoJSON.Point>
 const DEFAULT_ZOOM = 15
 const MIN_ZOOM = 12
 const MAX_ZOOM = 15.5
-/** Tilt while driving, so more of the road ahead fits at the same zoom. */
-const DRIVE_PITCH = 35
-/** While driving the puck sits below centre: this share of the screen height
- *  is given to the road ahead. */
-const DRIVE_TOP_SHARE = 0.28
 /** Pins farther than this don't pull the zoom out. */
 const ZOOM_REACH_M = 5000
 
@@ -79,12 +74,13 @@ function radiusRing(lng: number, lat: number, meters: number): GeoJSON.Feature<G
 
 const EMPTY_FC: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
 
-// Navigation puck: a small dot with a heading arrow that shows while moving.
+// Location puck: a small dot with an arrow that shows while moving and turns
+// to the heading (the map itself stays north-up).
 const PUCK_HTML =
   '<span class="mk-user-pulse"></span>' +
   '<span class="mk-user-dot">' +
   '<svg class="mk-user-arrow" viewBox="0 0 24 24" aria-hidden="true">' +
-  '<path d="M12 3.5 19 19.5 12 15.8 5 19.5Z" fill="#fff" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>' +
+  '<path d="M12 2 19 21 12 14.5 5 21Z" fill="#fff" stroke="#fff" stroke-width="0.8" stroke-linejoin="round"/>' +
   '</svg></span>'
 
 function isQuestConfig(c: Configuration | null | undefined): boolean {
@@ -246,6 +242,8 @@ export default function MapScreen() {
   const popupRef = useRef<mapboxgl.Popup | null>(null)
   const userCarRef = useRef<mapboxgl.Marker | null>(null)
   const didCenter = useRef(false)
+  // Arrow rotation, accumulated so it always turns the short way round.
+  const arrowDeg = useRef(0)
   const recenterTimer = useRef<number | null>(null)
   const resizeObs = useRef<ResizeObserver | null>(null)
   // Server marker icons loaded into the GL style, keyed by their URL (also the
@@ -313,6 +311,10 @@ export default function MapScreen() {
       zoom: DEFAULT_ZOOM,
       attributionControl: false,
     })
+    // The map stays flat and north-up: only the puck's arrow turns.
+    map.dragRotate.disable()
+    map.touchZoomRotate.disableRotation()
+    map.touchPitch.disable()
     // User pans → stop following. After 5s idle → auto-recenter & resume.
     map.on('dragstart', () => {
       setFollowing(false)
@@ -461,7 +463,7 @@ export default function MapScreen() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Follow the user: centre, heading, tilt and zoom go out in ONE easeTo call.
+  // Follow the user: centre and zoom go out in ONE easeTo call.
   // Separate easeTo calls on the same tick cancel each other (the later one
   // wins), which used to drop the follow whenever the zoom changed.
   useEffect(() => {
@@ -471,10 +473,8 @@ export default function MapScreen() {
 
     const { heading, speed } = position
     const moving = (speed ?? 0) > 1
-    const stopped = (speed ?? 0) < 0.5
 
-    // Create the puck on first fix. The MAP rotates to the heading, so the
-    // puck's arrow always points up the screen and never rotates itself.
+    // Create the puck on first fix.
     if (!userCarRef.current) {
       const el = document.createElement('div')
       el.className = 'mk-user'
@@ -485,7 +485,14 @@ export default function MapScreen() {
     } else {
       userCarRef.current.setLngLat(ll)
     }
-    userCarRef.current.getElement().classList.toggle('is-moving', moving && heading != null)
+    const puck = userCarRef.current.getElement()
+    puck.classList.toggle('is-moving', moving && heading != null)
+    if (moving && heading != null) {
+      const arrow = puck.querySelector<SVGElement>('.mk-user-arrow')
+      const delta = ((heading - arrowDeg.current + 540) % 360) - 180
+      arrowDeg.current += delta
+      if (arrow) arrow.style.rotate = `${arrowDeg.current}deg`
+    }
     const radiusSrc = map.getSource('user-radius') as mapboxgl.GeoJSONSource | undefined
     radiusSrc?.setData(radiusRing(position.lng, position.lat, TRIGGER_RADIUS_M))
 
@@ -495,37 +502,28 @@ export default function MapScreen() {
       return
     }
 
-    const opts: Parameters<mapboxgl.Map['easeTo']>[0] = { duration: 500 }
-    if (heading != null && moving) opts.bearing = heading
-    else if (stopped) opts.bearing = 0
+    if (!following) return
+    const opts: Parameters<mapboxgl.Map['easeTo']>[0] = { duration: 500, center: ll }
+    const canvas = map.getCanvas()
+    const w = canvas.clientWidth
+    const h = canvas.clientHeight
 
-    if (following) {
-      opts.center = ll
-      // Driving: tilt the map and drop the puck toward the bottom, so the
-      // screen is spent on the road ahead. Parked: flat, north-up, centred.
-      const canvas = map.getCanvas()
-      const w = canvas.clientWidth
-      const h = canvas.clientHeight
-      opts.pitch = moving ? DRIVE_PITCH : 0
-      opts.padding = { top: moving ? h * DRIVE_TOP_SHARE : 0, bottom: 0, left: 0, right: 0 }
-
-      // Zoom so the nearest unplayed pin is on screen, and back in as it gets
-      // close: no closer than street level, no farther out than a few km.
-      const { items, missions, openMissions } = useMarkers.getState()
-      let nearest = Infinity
-      for (const m of [...items, ...missions, ...openMissions]) {
-        const d = distanceMeters(position.lat, position.lng, Number(m.lat), Number(m.lng))
-        if (d < nearest) nearest = d
-      }
-      const target =
-        nearest <= ZOOM_REACH_M
-          ? Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoomToFit(nearest, Math.min(w, h) * 0.36, position.lat)))
-          : DEFAULT_ZOOM
-      // Ignore small differences so the zoom doesn't breathe on every tick.
-      if (Math.abs(target - map.getZoom()) > 0.2) opts.zoom = target
+    // Zoom so the nearest unplayed pin is on screen, and back in as it gets
+    // close: no closer than street level, no farther out than a few km.
+    const { items, missions, openMissions } = useMarkers.getState()
+    let nearest = Infinity
+    for (const m of [...items, ...missions, ...openMissions]) {
+      const d = distanceMeters(position.lat, position.lng, Number(m.lat), Number(m.lng))
+      if (d < nearest) nearest = d
     }
+    const target =
+      nearest <= ZOOM_REACH_M
+        ? Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoomToFit(nearest, Math.min(w, h) * 0.36, position.lat)))
+        : DEFAULT_ZOOM
+    // Ignore small differences so the zoom doesn't breathe on every tick.
+    if (Math.abs(target - map.getZoom()) > 0.2) opts.zoom = target
 
-    if (opts.center || opts.bearing != null) map.easeTo(opts)
+    map.easeTo(opts)
   }, [position, following, layersReady, markersStore.items, markersStore.missions, markersStore.openMissions])
 
   // Push marker data into the GL source whenever markers OR the server icon
