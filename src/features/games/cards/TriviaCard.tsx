@@ -2,7 +2,7 @@ import { type MouseEvent, useCallback, useEffect, useLayoutEffect, useRef, useSt
 import { useDriving } from '../../../store/driving'
 import { useSession } from '../../../store/session'
 import { reportEvents, NEXT_EVENT } from '../../../api/endpoints'
-import { isCorrect, isScored, normalize } from '../answer'
+import { isCorrect, isOpenText, isQuizQuestion, isScored, normalize } from '../answer'
 import { MediaBlock } from '../MediaBlock'
 import { t } from '../../../lib/i18n'
 import { Sounds } from '../../../lib/sounds'
@@ -63,6 +63,7 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
   const queueLen = useDriving((s) => s.queue.length)
   const items = useDriving((s) => s.items)
   const results = useDriving((s) => s.results)
+  const pointsById = useDriving((s) => s.points)
   const setResult = useDriving((s) => s.setResult)
   const position = useDriving((s) => s.position)
   const userId = useSession((s) => s.userId)
@@ -75,13 +76,8 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
   const rightAnswer = point.right_answer?.trim() ?? null
   const choices = (point.answers ?? []).filter(Boolean)
   const maxAttempts = point.points_second_correct != null ? 2 : 1
-  // Open-text question: a scored item the player answers by typing. Quiz
-  // "html" items carry these with no choices (e.g. "biggest animal?") or with
-  // the answer as their only choice (fill-in-the-blank "___").
-  const openText =
-    scored &&
-    !!point.question?.trim() &&
-    (choices.length === 0 || (choices.length === 1 && point.type === 'html'))
+  // Open-text question: answered by typing (see isOpenText).
+  const openText = isOpenText(point)
   // Unscored no-choice quiz items (html/story/info) are reveal-only: skip
   // straight to the story reveal — no guessing, no reaction.
   const revealOnly = choices.length === 0 && !openText
@@ -236,8 +232,8 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
     setPicked(choice)
     if (right) {
       Sounds.correct()
-      setResult(point.id, true)
       const pts = attempts === 0 ? point.points_first_correct : point.points_second_correct
+      setResult(point.id, true, scored && pts ? pts : 0)
       setEarned(scored && pts ? pts : null)
       startReaction('correct', at)
     } else {
@@ -265,23 +261,35 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
   }
 
   const themeClass = `tq trivia-theme-${point.marker_family || 'default'}`
-  // Progress: a fixed segment per quiz item (stable across the whole quiz),
-  // filling as we advance. Falls back to queue length for a lone proximity item.
-  const idx = items.findIndex((it) => it.id === point.id)
-  const totalSegments = items.length > 0 ? items.length : Math.max(1, queueLen + 1)
-  const currentIndex = idx >= 0 ? idx : 0
+  // Progress: one segment per real question of the quiz (not the intro/outro
+  // buttons, info cards or the summary item), stable across the whole quiz.
+  // Non-question cards light no segment. A lone proximity item has none.
+  const questions = items.filter(isQuizQuestion)
+  const segmentItems = questions.length > 1 ? questions : []
+  const currentIndex = segmentItems.findIndex((it) => it.id === point.id)
 
-  // Place: for quiz items the backend ships an anonymous score distribution
-  // (rank_stats); derive the player's place from it (1 + players who scored
-  // higher) like the Android app. Otherwise fall back to the HUD rank.
-  const stats = point.rank_stats
+  // Quiz score: points earned on this quiz's items in this run. The HUD score
+  // is the player's total over all games, so it can't be ranked against one
+  // quiz's results.
+  const quizScore = items.reduce((n, it) => n + (pointsById[it.id] ?? 0), 0)
+
+  // Place: each quiz item carries rank_stats, the distribution of all
+  // players' quiz scores right after that item. The player's place is 1 +
+  // players with more points. Until this item is answered, compare with the
+  // previous item's distribution (scores so far). Otherwise use the HUD rank.
+  const itemIdx = items.findIndex((it) => it.id === point.id)
+  const answered = results[point.id] !== undefined
+  const prevStats = itemIdx > 0 ? items[itemIdx - 1].rank_stats : null
+  const stats =
+    !answered && prevStats && prevStats.length > 0 ? prevStats : point.rank_stats
+  const quizRanked = !!stats && stats.length > 0
   let placeLabel = rank
-  if (stats && stats.length > 0) {
-    const myScore = Math.max(0, Number(score) || 0)
+  if (quizRanked) {
     placeLabel = String(
-      1 + stats.filter((s) => s.score > myScore).reduce((n, s) => n + s.count, 0),
+      1 + stats.filter((s) => s.score > quizScore).reduce((n, s) => n + s.count, 0),
     )
   }
+  const scoreLabel = quizRanked ? String(quizScore) : score
 
   const letters = locale === 'he' ? HE_LETTERS : EN_LETTERS
   const resolvedWrong = phase !== 'asking' && attempts >= maxAttempts && results[point.id] === false
@@ -297,11 +305,10 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
       <div className={themeClass}>
         {/* Top bar: progress + score / place / time */}
         <header className="tq-top">
-          {totalSegments > 1 && (
+          {segmentItems.length > 0 && (
             <div className="tq-progress">
-              {Array.from({ length: totalSegments }).map((_, i) => {
-                const item = items[i]
-                const res = item ? results[item.id] : undefined
+              {segmentItems.map((item, i) => {
+                const res = results[item.id]
                 const cls =
                   res !== undefined
                     ? res
@@ -310,14 +317,14 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
                     : i === currentIndex
                       ? 'seg-active'
                       : ''
-                return <span key={i} className={`seg ${cls}`} />
+                return <span key={item.id} className={`seg ${cls}`} />
               })}
             </div>
           )}
           <div className="tq-hud">
             <div className="tq-chip">
               <span className="tq-chip-icon" aria-hidden>★</span>
-              <span className="tq-chip-val">{score}</span>
+              <span className="tq-chip-val">{scoreLabel}</span>
               <span className="tq-chip-label">{t('points', locale)}</span>
             </div>
             <div className="tq-chip">
@@ -519,7 +526,7 @@ export default function TriviaCard({ point }: { point: RoadPoint }) {
               <h2 className="tq-summary-title">{t('quizComplete', locale)}</h2>
               <div className="tq-summary-stats">
                 <div className="tq-summary-stat">
-                  <div className="tq-summary-val">{score}</div>
+                  <div className="tq-summary-val">{scoreLabel}</div>
                   <div className="tq-summary-label">{t('points', locale)}</div>
                 </div>
                 <div className="tq-summary-stat">

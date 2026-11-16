@@ -25,6 +25,8 @@ interface DrivingState {
   activeCard: RoadPoint | null
   /** Per-item answer result (true=correct) — drives the quiz progress bar. */
   results: Record<number, boolean>
+  /** Points earned per item in the current item set (quiz score / place). */
+  points: Record<number, number>
   /** Epoch ms until which queued cards are held back (not shown). */
   holdCardsUntil: number
   /** Quiz names the user started in this session (daily / geofence quiz). */
@@ -35,7 +37,7 @@ interface DrivingState {
   setConfig: (c: Configuration) => void
   setItems: (items: RoadPoint[]) => void
   /** Record an answered item's correctness (for the progress bar). */
-  setResult: (id: number, correct: boolean) => void
+  setResult: (id: number, correct: boolean, points?: number) => void
   /** Enqueue points not already seen; mark them seen. Returns count added. */
   triggerItems: (points: RoadPoint[]) => number
   /** Promote the next queued card to active if none is showing. */
@@ -66,6 +68,7 @@ export const useDriving = create<DrivingState>((set, get) => ({
   queue: [],
   activeCard: null,
   results: {},
+  points: {},
   holdCardsUntil: 0,
 
   setActive: (active) => set({ active }),
@@ -85,9 +88,12 @@ export const useDriving = create<DrivingState>((set, get) => ({
     }
   },
   // New item set (e.g. starting a quiz) resets the per-item results.
-  setItems: (items) => set({ items, results: {} }),
-  setResult: (id, correct) =>
-    set((s) => ({ results: { ...s.results, [id]: correct } })),
+  setItems: (items) => set({ items, results: {}, points: {} }),
+  setResult: (id, correct, points = 0) =>
+    set((s) => ({
+      results: { ...s.results, [id]: correct },
+      points: { ...s.points, [id]: points },
+    })),
 
   triggerItems: (points) => {
     const seen = get().seenItemIds
@@ -145,6 +151,7 @@ export const useDriving = create<DrivingState>((set, get) => ({
       queue: [],
       activeCard: null,
       results: {},
+      points: {},
     }),
 }))
 

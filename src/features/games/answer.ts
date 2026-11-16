@@ -47,3 +47,26 @@ export function isBlankAck(point: RoadPoint): boolean {
     !point.html_template_name
   return blank && (point.answers ?? []).filter(Boolean).length <= 1
 }
+
+/**
+ * Open-text question: a scored item answered by typing. Quiz "html" items
+ * carry these with no choices (e.g. "biggest animal?") or with the answer as
+ * their only choice (fill-in-the-blank "___").
+ */
+export function isOpenText(point: RoadPoint): boolean {
+  const n = (point.answers ?? []).filter(Boolean).length
+  return (
+    isScored(point) &&
+    !!point.question?.trim() &&
+    (n === 0 || (n === 1 && point.type === 'html'))
+  )
+}
+
+/**
+ * A real quiz question (gets a progress segment): multiple choice or open
+ * text. Not intro/outro buttons, info cards or the empty summary item.
+ */
+export function isQuizQuestion(point: RoadPoint): boolean {
+  if (isBlankAck(point)) return false
+  return (point.answers ?? []).filter(Boolean).length >= 2 || isOpenText(point)
+}
